@@ -1921,6 +1921,7 @@ ${mouth}</svg>`;
     g.push({ n: 'Begrüßungen beim Öffnen', items: (D.GREETS || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: 'Kurze Starts bei Übungen', items: (D.STARTS || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: '2. Klasse: Uhrzeiten', items: [0, 30, 15, 45].flatMap((m) => [...Array(12)].map((_, h) => ({ id: `k2uhr:${h + 1}:${m}`, t: `Es ist ${uhrText(h + 1, m)}.` }))) });
+    g.push({ n: 'Lesetexte (Lese-Training)', items: D.LSTUFEN.flatMap((S, k) => S.texts.map((T, i) => ({ id: leseClipId(k + 1, i), t: plain(T.t), hint: `Stufe ${k + 1}: ${T.n}` }))) });
     g.push({ n: 'Trickbuch', items: Object.entries(D.TRICKS).map(([k, T]) => ({ id: 'trick:' + k, t: T.n + '. ' + T.d })) });
     return g;
   }
@@ -2233,11 +2234,32 @@ ${mouth}</svg>`;
     return out;
   }
   function wordsOf(t) { return t.split(/\s+/).filter((w) => /[A-Za-zÄÖÜäöüß]/.test(w)).length; }
+  // Lesetext-Stufen: automatisch nach Tempo (2. Lesen) und Verständnisfrage, oder fest im Eltern-Bereich.
+  const LESE_UP = 55, LESE_JUMP = 90, LESE_DOWN = 20, LESE_MAX = 220; // Wörter pro Minute
+  function leseLvl() {
+    const s = state.settings.leseLvl; const n = D.LSTUFEN.length;
+    if (s && s !== 'auto') return Math.min(n, Math.max(1, +s));
+    return Math.min(n, Math.max(1, (state.lese && state.lese.lvl) || 1));
+  }
+  const leseClipId = (lvl, i) => (lvl === 1 ? 'lt:' : 'lt' + lvl + ':') + i;
+  function leseAdapt(res) {
+    if (state.settings.leseLvl && state.settings.leseLvl !== 'auto') return null;
+    const L = state.lese; const cur = leseLvl(); const n = D.LSTUFEN.length; const w2 = res.wpm2 || 0;
+    const good = res.frage === true && w2 >= LESE_UP && w2 <= LESE_MAX;
+    const bad = res.frage === false || (res.wpm1 && res.wpm1 < LESE_DOWN);
+    L.up = good ? (L.up || 0) + 1 : 0; L.down = bad ? (L.down || 0) + 1 : 0;
+    let to = cur;
+    if (good && (w2 >= LESE_JUMP || L.up >= 2) && cur < n) to = cur + 1;
+    else if (L.down >= 2 && cur > 1) to = cur - 1;
+    if (to === cur) { L.lvl = cur; return null; }
+    L.lvl = to; L.up = 0; L.down = 0; return to > cur ? 'up' : 'down';
+  }
   function showLeseTraining() {
     state.lese = state.lese || { log: [] };
     const L = state.lese; const today = dayNum();
     const res = { d: dayKey(today) };
-    const textIdx = Math.floor(today / 2) % D.LTEXTS.length; const T = D.LTEXTS[textIdx];
+    const lvl = leseLvl(); const TX = D.LSTUFEN[lvl - 1].texts;
+    const textIdx = Math.floor(today / 2) % TX.length; const T = TX[textIdx]; res.lvl = lvl;
     const last = L.log[L.log.length - 1];
     const scr = h('main', { class: 'screen lese' });
     mount(scr, 'pool');
@@ -2291,13 +2313,13 @@ ${mouth}</svg>`;
     // 3) Wiederholtes Lesen: zuhören, selbst lesen, nochmal schneller, Frage
     function text1() {
       step(2);
-      const tx = textEl(T.t, { cls: 'sentence left lese-text' });
-      body.replaceChildren(h('h2', { class: 'lese-h' }, '📖 ' + T.n), h('p', { class: 'note' }, 'Hör erst zu und lies leise mit.'), tx,
-        h('button', { class: 'tile go big', id: 'lt-listen', onclick: async (e) => { e.target.disabled = true; await Voice.say([{ id: 'lt:' + textIdx, text: T.t, force: true }]); readTimed(1); } }, '🔊 Zuhören'),
+      const tx = textEl(T.t, { cls: 'sentence left lese-text lv' + lvl });
+      body.replaceChildren(h('h2', { class: 'lese-h' }, '📖 ' + T.n), h('p', { class: 'lese-lvl' }, '⭐'.repeat(lvl) + ' Stufe ' + lvl), h('p', { class: 'note' }, 'Hör erst zu und lies leise mit.'), tx,
+        h('button', { class: 'tile go big', id: 'lt-listen', onclick: async (e) => { e.target.disabled = true; await Voice.say([{ id: leseClipId(lvl, textIdx), text: plain(T.t), force: true }]); readTimed(1); } }, '🔊 Zuhören'),
         h('button', { class: 'link-btn', onclick: () => readTimed(1) }, 'Überspringen'));
     }
     function readTimed(round) {
-      const tx = textEl(T.t, { cls: 'sentence left lese-text' }); let t0 = 0;
+      const tx = textEl(T.t, { cls: 'sentence left lese-text lv' + lvl }); let t0 = 0;
       const go = h('button', { class: 'tile go big', id: 'lt-go', onclick: () => { t0 = Date.now(); go.hidden = true; done.hidden = false; tx.classList.add('active'); SFX.tap(); } }, round === 1 ? '▶ Start: Ich lese laut' : '▶ Nochmal, noch flüssiger!');
       const done = h('button', { class: 'tile go big', id: 'lt-done', hidden: true, onclick: () => {
         const sec = Math.max(1, (Date.now() - t0) / 1000); const wpm = Math.round(wordsOf(T.t) / sec * 60);
@@ -2321,10 +2343,12 @@ ${mouth}</svg>`;
       } }, v)));
     }
     function finish() {
+      const ch = leseAdapt(res); if (ch) res.lvlNew = state.lese.lvl;
       saveLog(false);
       const gift = Math.random() < 0.5 ? (() => { const un = D.STICKERS.filter((s) => !state.stickers.owned.includes(s.id)); if (!un.length) return null; const g = pick(un); state.stickers.owned.push(g.id); save(); return g; })() : null;
       body.replaceChildren(h('div', { class: 'lese-result' }, svgEl(svgMax({ mood: 'happy' }), 'quit-max'), h('p', { class: 'h-display' }, 'Lese-Training geschafft! 🎉'),
         h('p', { class: 'note' }, `Silben: ${res.teppich} · Blitzwörter: ${res.blitz} · Text: ${res.wpm2 || res.wpm1} Wörter pro Minute`),
+        ch === 'up' ? h('p', { class: 'note lvl-up' }, `🚀 Neue Lese-Stufe ${state.lese.lvl}! Die nächsten Texte werden länger.`) : null,
         gift ? h('p', { class: 'note' }, `Geschenk für Max: ${gift.e} ${gift.n}`) : null,
         h('button', { class: 'tile', id: 'lese-mama', onclick: (e) => { res.mama = true; L.log[L.log.length - 1].mama = true; save(); e.target.textContent = 'Eingetragen ✓'; e.target.disabled = true; sendReport(`${state.name || 'Diana'}: Lesen mit Mama ✓`, 'Heute 10 Minuten zusammen mit Mama gelesen.'); } }, '👩 Mama: Wir haben heute 10 Min. zusammen gelesen'),
         h('button', { class: 'tile go big', id: 'lese-home', onclick: () => showHome() }, 'Fertig')));
@@ -2336,8 +2360,9 @@ ${mouth}</svg>`;
     const L = state.lese.log; const prev = L.slice(0, -1).reverse().find((x) => x.teppich != null);
     const lines = [`Silbenteppich: ${res.teppich ?? '–'} Silben in 30 s${prev ? ` (davor ${prev.teppich})` : ''}`];
     if (res.blitz) lines.push(`Blitzwörter: ${res.blitz} richtig`);
-    if (res.t1) lines.push(`Text „${T.n}“: 1. Mal ${res.t1} s (${res.wpm1} W/min)${res.t2 ? `, 2. Mal ${res.t2} s (${res.wpm2} W/min)` : ''}`);
+    if (res.t1) lines.push(`Text „${T.n}“ (Stufe ${res.lvl || 1}): 1. Mal ${res.t1} s (${res.wpm1} W/min)${res.t2 ? `, 2. Mal ${res.t2} s (${res.wpm2} W/min)` : ''}`);
     if (res.frage != null) lines.push(`Verständnisfrage: ${res.frage ? 'richtig' : 'falsch'}`);
+    if (res.lvlNew) lines.push(res.lvlNew > (res.lvl || 1) ? `⬆️ Neue Lese-Stufe: ${res.lvlNew}` : `⬇️ Lese-Stufe zurück auf ${res.lvlNew} (Text war zu schwer)`);
     if (res.partial) lines.push('(vorzeitig beendet)');
     const days = new Set(L.map((x) => x.d)).size; lines.push(`Lese-Training an ${days} Tagen`);
     sendReport(`${state.name || 'Diana'}: Lese-Training 📖`, lines.join('\n'));
@@ -2441,6 +2466,7 @@ ${mouth}</svg>`;
       h('section', { class: 'p-card' }, h('h2', null, 'Diese Woche'),
         h('div', { class: 'bars' }, week.map(({ n, d }) => h('div', { class: 'bar' }, h('span', { class: 'bar-v' }, d.t ? String(d.t) : ''), h('span', { class: 'bar-f', style: `height:${Math.round((d.t / maxT) * 100)}%` }), h('span', { class: 'bar-l' }, WD[new Date(n * 86400000).getUTCDay()])))),
         h('p', { class: 'note' }, `Aufgaben pro Tag. Heute: ${sessionsToday()} von ${state.settings.perDay} Runden. Trefferquote zuletzt: ${Math.round(accuracy() * 100)} %.`)),
+      leseCard(),
       h('section', { class: 'p-card' }, h('h2', null, 'Rechnen'), h('p', { class: 'note' }, 'Plus und Minus gehen Schritt für Schritt. Die nächste Stufe öffnet sich von selbst, wenn 70 % der vorigen klappen. Sind die ersten 6 Aufgaben einer Stufe schnell richtig, überspringt die App das Einüben. „Sicher“ heißt: an mehreren Tagen richtig. Mal-Aufgaben schaltest du unter Einstellungen ein.'), reihen),
       h('section', { class: 'p-card' }, h('h2', null, 'Buchstaben'), h('p', { class: 'note' }, 'Grau: neu, Rot: wackelt, Gelb: geübt, Grün: sicher. Antippen markiert einen Buchstaben als „kann sie schon“ (oder setzt ihn zurück).'), letters,
         h('p', { class: 'note' }, `Silben: ${stageUnlocked('s') ? countBox('s:', 3) + ' sicher' : 'öffnet sich bei 3 Mitlauten + 2 Selbstlauten'} · Wörter: ${stageUnlocked('w') ? countBox('w:', 3) + ' sicher' : 'gesperrt'} · Sätze: ${stageUnlocked('t') ? countBox('t:', 3) + ' sicher' : 'gesperrt'}`)),
@@ -2460,6 +2486,12 @@ ${mouth}</svg>`;
           h('li', null, 'Beim Vorlesen dabei sein und zuhören. Das bringt fürs Lesen am meisten.'),
           h('li', null, 'Für Anstrengung loben („Du hast nicht aufgegeben“), nicht fürs Schlausein.'),
           h('li', null, 'Die App nicht als Belohnung oder Strafe einsetzen.'))));
+  }
+  function leseCard() {
+    const log = ((state.lese && state.lese.log) || []).filter((x) => x.teppich != null).slice(-7).reverse();
+    return h('section', { class: 'p-card' }, h('h2', null, 'Lese-Training'),
+      h('p', { class: 'note' }, `Lesetext-Stufe ${leseLvl()} von ${D.LSTUFEN.length}${state.settings.leseLvl && state.settings.leseLvl !== 'auto' ? ' (fest eingestellt)' : ' (passt sich an)'}. Wörter pro Minute = beim 2. Lesen.`),
+      log.length ? h('div', { class: 'p-list' }, log.map((x) => h('div', { class: 'p-row' }, h('span', { class: 'p-name' }, `${x.d.slice(8, 10)}.${x.d.slice(5, 7)}. · Stufe ${x.lvl || 1}`), h('span', { class: 'p-num' }, `${x.teppich} Silben · ${x.wpm2 || x.wpm1 || '–'} W/min · Frage ${x.frage == null ? '–' : x.frage ? '✓' : '✗'}${x.partial ? ' · abgebrochen' : ''}`)))) : h('p', { class: 'note' }, 'Noch kein Lese-Training gemacht.'));
   }
   function pSet(body) {
     const toggle = (key, label) => h('label', { class: 'p-toggle' }, h('input', { type: 'checkbox', id: 'set-' + key, checked: state.settings[key] ? true : null, onchange: (e) => { state.settings[key] = e.target.checked; save(); } }), label);
@@ -2483,6 +2515,8 @@ ${mouth}</svg>`;
         toggle('dance', 'Tanz-Pause in der Mitte jeder Runde'),
         toggle('music', 'Musik in der Tanz-Pause'),
         toggle('write', 'Schreiben mit Stift (Abschreiben, Merken-Schreiben)'),
+        h('div', { class: 'p-seg' }, h('span', { class: 'lbl' }, 'Lesetext-Stufe'), h('div', { class: 'seg', id: 'set-lese' }, ['auto', 1, 2, 3, 4].map((v) => h('button', { class: 'seg-b' + (String(state.settings.leseLvl || 'auto') === String(v) ? ' on' : ''), onclick: () => { state.settings.leseLvl = v; if (v !== 'auto') { state.lese = state.lese || { log: [] }; state.lese.lvl = v; state.lese.up = 0; state.lese.down = 0; } save(); showParents('set'); } }, v === 'auto' ? 'Automatisch' : String(v))))),
+        h('p', { class: 'note' }, `Automatisch: eine Stufe höher nach 2 Trainings mit richtiger Frage und mindestens ${LESE_UP} Wörtern/Minute beim 2. Lesen (bei ${LESE_JUMP}+ sofort), eine tiefer nach 2 falschen Fragen oder unter ${LESE_DOWN} Wörtern/Minute. Aktuell: Stufe ${leseLvl()}.`),
         h('label', { class: 'p-toggle' }, h('input', { type: 'checkbox', id: 'set-mal', checked: state.settings.mal ? true : null, onchange: (e) => { state.settings.mal = e.target.checked; save(); } }), 'Mal-Aufgaben einschalten (erst, wenn sie in der Schule dran sind)'),
         h('button', { class: 'tile', id: 'extra-round', onclick: (e) => { if (state.extra.day === today) state.extra.n++; else state.extra = { day: today, n: 1 }; save(); e.target.textContent = 'Extra-Runde für heute freigeschaltet ✓'; } }, 'Heute eine Extra-Runde freischalten')),
       h('section', { class: 'p-card' }, h('h2', null, 'Russisch'),

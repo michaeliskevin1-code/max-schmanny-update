@@ -579,3 +579,7 @@ button { font: inherit; color: inherit; }
 .tour-bubble p { margin: 0 0 8px; }
 .tour-tap { color: #c47a00; font-weight: 700; font-size: .8em; }
 .tour-count { position: absolute; right: 14px; bottom: 10px; font-size: 13px; color: #8a96a5; }
+.lese-lvl { text-align: center; margin: -2px 0 4px; font-weight: 700; color: #b8860b; letter-spacing: .5px; }
+.lese-text.lv3 { font-size: clamp(22px, 4vw, 30px); line-height: 1.65; }
+.lese-text.lv4 { font-size: clamp(20px, 3.4vw, 27px); line-height: 1.6; }
+.lvl-up { font-weight: 700; color: #1a7f37; }
