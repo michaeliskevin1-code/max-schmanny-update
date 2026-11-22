@@ -57,7 +57,7 @@ window.APPDATA = (function () {
     { w: 'Ro-se', e: '🌹', sim: ['Ho-se', 'Do-se'] },
     { w: 'So-fa', e: '🛋️' },
     { w: 'Eis', e: '🍦', sim: ['Reis', 'heiß'] },
-    { w: 'I-gel', e: '🦔', sim: ['E-gel', 'Na-gel'] },
+    { w: 'I-gel', e: '🦔', sim: ['Na-gel', 'Vo-gel'] },
     { w: 'Au-to', e: '🚗', sim: ['Au-ge', 'Ot-to'] },
     { w: 'Maus', e: '🐭', sim: ['Haus', 'Laus'] },
     { w: 'Haus', e: '🏠', sim: ['Maus', 'raus'] },
@@ -67,14 +67,14 @@ window.APPDATA = (function () {
     { w: 'Ball', e: '⚽', sim: ['Fall', 'Stall'] },
     { w: 'Son-ne', e: '☀️', sim: ['Ton-ne', 'Wan-ne'] },
     { w: 'Ti-ger', e: '🐯' },
-    { w: 'La-ma', e: '🦙', sim: ['Ma-ma', 'Lo-ma'] },
+    { w: 'La-ma', e: '🦙', sim: ['Ma-ma', 'Na-me'] },
     { w: 'Ki-wi', e: '🥝' },
     { w: 'Ra-ke-te', e: '🚀' },
     { w: 'To-ma-te', e: '🍅' },
     { w: 'Ba-na-ne', e: '🍌' },
     { w: 'Me-lo-ne', e: '🍉' },
     { w: 'Kä-se', e: '🧀', sim: ['Va-se', 'Ha-se'] },
-    { w: 'Lö-we', e: '🦁', sim: ['Mö-we', 'Lo-se'] },
+    { w: 'Lö-we', e: '🦁', sim: ['Mö-we', 'Lie-be'] },
     { w: 'Baum', e: '🌳', sim: ['Raum', 'Schaum'] },
     { w: 'Hut', e: '👒', sim: ['gut', 'Mut'] },
     { w: 'Kro-ne', e: '👑', sim: ['Boh-ne', 'Zo-ne'] },
@@ -82,8 +82,8 @@ window.APPDATA = (function () {
     { w: 'En-te', e: '🦆', sim: ['Ern-te', 'Tan-te'] },
     { w: 'Wan-ne', e: '🛁', sim: ['Kan-ne', 'Tan-ne'] },
     { w: 'Was-ser', e: '💧', sim: ['Mes-ser', 'bes-ser'] },
-    { w: 'tan-zen', e: '💃', sim: ['tan-ken', 'ran-ken'] },
-    { w: 'Zahn', e: '🦷', sim: ['Hahn', 'Kahn'] },
+    { w: 'tan-zen', e: '💃', sim: ['tan-ken', 'tau-chen'] },
+    { w: 'Zahn', e: '🦷', sim: ['Hahn', 'Zaun'] },
     { w: 'Ei', e: '🥚', sim: ['Eis', 'Hai'] },
     { w: 'Hai', e: '🦈', sim: ['Ei', 'Heu'] },
     { w: 'Eu-le', e: '🦉', sim: ['Keu-le', 'Beu-le'] },
@@ -105,16 +105,16 @@ window.APPDATA = (function () {
     { w: 'Piz-za', e: '🍕' },
     { w: 'Chi-li', e: '🌶️', sight: true },
     { w: 'Eis-lau-fen', e: '⛸️' },
-    { w: 'Scho-ki', e: '🍫', sim: ['Scho-ko', 'Sho-gi'] },
+    { w: 'Scho-ki', e: '🍫', sim: ['Scho-ko', 'Schu-le'] },
     { w: 'Ten-nis-ball', e: '🎾' },
-    { w: 'Bru-der', e: '👦', sim: ['Lu-der', 'Bu-de'] },
-    { w: 'Kleid', e: '👗', sim: ['Kleie', 'Leid'] },
-    { w: 'Glit-zer', e: '✨', sim: ['Git-ter', 'Glät-te'] },
+    { w: 'Bru-der', e: '👦', sim: ['But-ter', 'Bu-de'] },
+    { w: 'Kleid', e: '👗', sim: ['Kreis', 'Klee'] },
+    { w: 'Glit-zer', e: '✨', sim: ['Glo-cke', 'Rit-ter'] },
     { w: 'Lip-pen-stift', e: '💄' },
     { w: 'Na-gel-lack', e: '💅' },
     { w: 'Ring', e: '💍', sim: ['Ding', 'Rind'] },
-    { w: 'Ta-sche', e: '👜', sim: ['Ta-sse', 'Wä-sche'] },
-    { w: 'Lied', e: '🎶', sim: ['Lid', 'Leid'] },
+    { w: 'Ta-sche', e: '👜', sim: ['Tas-se', 'Wä-sche'] },
+    { w: 'Lied', e: '🎶', sim: ['Licht', 'lieb'] },
     { w: 'Kopf-hö-rer', e: '🎧' }
   ];
 
@@ -171,7 +171,7 @@ window.APPDATA = (function () {
     { t: 'Ich mag Scho-ki, a-ber kei-ne Chi-li!', e: '🌶️' },
     { t: 'Ich bin {N}, und ich bin su-per!', e: '⭐' },
     { t: 'Ich bin ei-ne Chi-li.', q: false, r: 'Quatsch! Du bist {N}. Pablo ist die Chili!', e: '🌶️' },
-    { t: 'Max ist ei-ne Kat-ze.', q: false, r: 'Max ist ein Hund! Schmanny ist die Katze.', e: '🐶' },
+    { t: 'Max ist ei-ne Kat-ze.', q: false, r: 'Max ist ein Hund! Schmanny ist der Kater.', e: '🐶' },
     { t: 'Ke-vin ist ein Ba-by.', q: false, r: 'Quatsch! Kevin ist dein großer Bruder.', e: '👶' },
     // Musik, Mode, Make-up
     { t: 'Ich hö-re gern [Mu-sik].', e: '🎧', o: ['Re-gen', 'Stau-be'] },
@@ -221,9 +221,9 @@ window.APPDATA = (function () {
     { ti: 'Party', lines: ['Al-le la-chen laut.', 'Max wa-ckelt mit dem Po.', 'Pa-blo macht Mu-sik.', 'Zeit für ei-ne Tanz-par-ty!'],
       end: 'Wer tanzt am bes-ten?',
       q: { t: 'Wo-für ist jetzt Zeit?', a: ['Tanz-par-ty', 'Schu-le', 'schla-fen'], e: ['🎉', '🏫', '😴'] } },
-    { ti: 'Der Tanz', lines: ['{N} zeigt ih-ren Tanz.', 'Max tanzt mit.', 'Schman-ny tanzt nicht. Sie schaut nur.', 'A-ber heim-lich wa-ckelt sie mit dem Schwanz.'],
+    { ti: 'Der Tanz', lines: ['{N} zeigt ih-ren Tanz.', 'Max tanzt mit.', 'Schman-ny tanzt nicht. Er schaut nur.', 'A-ber heim-lich wa-ckelt er mit dem Schwanz.'],
       end: 'Psst! Nicht wei-ter-sa-gen!',
-      q: { t: 'Was macht Schman-ny heim-lich?', a: ['sie wa-ckelt mit dem Schwanz', 'sie bellt', 'sie schwimmt'], e: ['🐈', '🐕', '🏊'] } },
+      q: { t: 'Was macht Schman-ny heim-lich?', a: ['er wa-ckelt mit dem Schwanz', 'er bellt', 'er schwimmt'], e: ['🐈', '🐕', '🏊'] } },
     { ti: 'Gute Nacht', lines: ['Am A-bend ist Max mü-de.', 'Er legt sich in sein Körb-chen.', '{N} sagt: Gu-te Nacht, Max!', 'Pa-blo flüs-tert: Mor-gen gibt es ein neu-es A-ben-teu-er ...'],
       end: 'En-de. Frag Ke-vin nach neu-en Ka-pi-teln!',
       q: { t: 'Wer ist mü-de?', a: ['Max', 'Pa-blo', 'Ke-vin'], e: ['🐶', '🌶️', '👦'] } }
@@ -367,7 +367,7 @@ window.APPDATA = (function () {
   const PRAISE_TEXT = [
     'Richtig! Max wedelt so doll, dass er fast umkippt.',
     'Mega! Du hast genau hingeschaut.',
-    'Stark! Schmanny tut so, als wäre sie nicht beeindruckt. Ist sie aber.',
+    'Stark! Schmanny tut so, als wäre er nicht beeindruckt. Ist er aber.',
     'Jawoll! Pablo ärgert sich. Du bist zu schlau für ihn.',
     'Richtig! Gut überlegt.',
     'Bäm! Das war schärfer als Kevins Chili.',
@@ -589,7 +589,7 @@ window.APPDATA = (function () {
     ['−', 'Diana hat {a} Sticker. Sie schenkt Kevin {b}. Wie viele Sticker hat sie noch?'],
     ['+', 'Auf dem Eis sind {a} Kinder. Dann kommen {b} Kinder dazu. Wie viele Kinder sind jetzt auf dem Eis?'],
     ['−', 'Im Schwimmbad sind {a} Enten. {b} Enten fliegen weg. Wie viele Enten bleiben?'],
-    ['+', 'Schmanny schläft {a} Stunden am Morgen und {b} Stunden am Abend. Wie viele Stunden schläft sie?'],
+    ['+', 'Schmanny schläft {a} Stunden am Morgen und {b} Stunden am Abend. Wie viele Stunden schläft er?'],
     ['−', 'Pablo hat {a} Chilis. Er isst {b}. Wie viele Chilis hat er noch?'],
     ['+', 'Diana tanzt {a} Minuten. Dann tanzt sie noch {b} Minuten. Wie lange tanzt sie?'],
     ['−', 'Kevin hat {a} Euro. Er kauft ein Eis für {b} Euro. Wie viel Geld hat er noch?']
@@ -615,7 +615,7 @@ window.APPDATA = (function () {
   const HFW = ['und', 'die', 'der', 'das', 'ist', 'ein', 'eine', 'ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'in', 'im', 'an', 'am', 'auf', 'mit', 'zu', 'von', 'für', 'aus', 'bei', 'nach', 'nicht', 'auch', 'so', 'da', 'hier', 'wo', 'wie', 'was', 'wer', 'ja', 'nein', 'mein', 'dein', 'kann', 'will', 'hat', 'sind', 'war', 'hab', 'gibt', 'geht', 'kommt', 'macht', 'sagt', 'mag', 'gut', 'groß', 'klein', 'viel', 'alle', 'dann', 'jetzt', 'heute', 'schon', 'noch', 'nur', 'oder', 'aber', 'weil', 'wenn', 'immer', 'wieder', 'sehr', 'gern', 'mal', 'den', 'dem', 'des', 'einen', 'mich', 'dich', 'sich', 'uns', 'zum', 'zur', 'vor', 'unter', 'über', 'um', 'bis', 'ohne', 'ganz', 'neu', 'alt', 'Mama', 'Papa', 'Kind', 'Haus', 'Tag', 'Zeit', 'lacht', 'spielt', 'sieht', 'ruft'];
   const LTEXTS = [
     { n: 'Max im Schnee', t: 'Max rennt in den Schnee. Er bellt laut. Der Schnee ist kalt. Max hat ei-ne wei-ße Na-se. Di-a-na lacht. Dann rennt Max wie-der ins Haus.', q: 'Was hat Max im Schnee?', a: 'Eine weiße Nase', w: ['Einen roten Hut', 'Eine Chili'] },
-    { n: 'Schmanny schläft', t: 'Schman-ny liegt auf dem So-fa. Sie schläft und schnurrt. Max will spie-len. A-ber Schman-ny macht nur ein Au-ge auf. Dann schläft sie wei-ter.', q: 'Wo liegt Schmanny?', a: 'Auf dem Sofa', w: ['Im Bett', 'Im Garten'] },
+    { n: 'Schmanny schläft', t: 'Schman-ny liegt auf dem So-fa. Er schläft und schnurrt. Max will spie-len. A-ber Schman-ny macht nur ein Au-ge auf. Dann schläft er wei-ter.', q: 'Wo liegt Schmanny?', a: 'Auf dem Sofa', w: ['Im Bett', 'Im Garten'] },
     { n: 'Pablo und die Chili', t: 'Pa-blo fin-det ei-ne ro-te Chi-li. Er beißt hi-nein. Oh nein! Die Chi-li ist sehr scharf. Pa-blo wird ganz rot. Er trinkt ein Glas Milch.', q: 'Was trinkt Pablo?', a: 'Milch', w: ['Saft', 'Wasser'] },
     { n: 'Auf dem Eis', t: 'Di-a-na geht auf die Eis-bahn. Sie dreht sich im Kreis. Ein-mal fällt sie hin. Das ist nicht schlimm. Sie steht auf und fährt wei-ter.', q: 'Was macht Diana, als sie hinfällt?', a: 'Sie steht auf', w: ['Sie weint', 'Sie geht nach Hause'] },
     { n: 'Der neue Tanz', t: 'Di-a-na hat ei-nen neu-en Tanz. Sie dreht sich und springt. Max tanzt mit. Er wa-ckelt mit dem Po. Al-le la-chen laut.', q: 'Wer tanzt mit?', a: 'Max', w: ['Schmanny', 'Pablo'] },
@@ -623,7 +623,7 @@ window.APPDATA = (function () {
     { n: 'Kevin und die Dose', t: 'Ke-vin hat ei-ne Do-se. Was ist da drin? Di-a-na macht sie auf. In der Do-se ist ei-ne Chi-li. Ke-vin lacht. Di-a-na lacht auch.', q: 'Was ist in der Dose?', a: 'Eine Chili', w: ['Ein Ball', 'Schoki'] },
     { n: 'Max und der Ball', t: 'Max hat ei-nen gel-ben Ball. Di-a-na wirft den Ball weit weg. Max rennt los. Er bringt den Ball zu-rück. Er will noch mal!', q: 'Welche Farbe hat der Ball?', a: 'Gelb', w: ['Rot', 'Blau'] },
     { n: 'Schoki', t: 'Di-a-na mag Scho-ki. Ma-ma gibt ihr ein Stück. Max will auch ein Stück. A-ber Scho-ki ist nicht gut für Hun-de. Max be-kommt ei-nen Keks.', q: 'Was bekommt Max?', a: 'Einen Keks', w: ['Schoki', 'Eine Wurst'] },
-    { n: 'Make-up', t: 'Di-a-na malt sich die Lip-pen rot. Sie hat ein Glit-zer-kleid an. Schman-ny sieht zu. Di-a-na malt auch Schman-ny an. Schman-ny läuft weg.', q: 'Was macht Schmanny?', a: 'Sie läuft weg', w: ['Sie tanzt', 'Sie schläft'] },
+    { n: 'Make-up', t: 'Di-a-na malt sich die Lip-pen rot. Sie hat ein Glit-zer-kleid an. Schman-ny sieht zu. Di-a-na malt auch Schman-ny an. Schman-ny läuft weg.', q: 'Was macht Schmanny?', a: 'Er läuft weg', w: ['Er tanzt', 'Er schläft'] },
     { n: 'Pablo ist weg', t: 'Wo ist Pa-blo? Di-a-na sucht im Bett. Sie sucht un-ter dem Tisch. Da ist er! Pa-blo sitzt im Schrank und isst Kek-se.', q: 'Wo sitzt Pablo?', a: 'Im Schrank', w: ['Im Bett', 'Unter dem Tisch'] },
     { n: 'Musik', t: 'Di-a-na macht Mu-sik an. Die Mu-sik ist laut. Max heult mit. Schman-ny hält sich die Oh-ren zu. Di-a-na tanzt und singt.', q: 'Was macht Max?', a: 'Er heult mit', w: ['Er schläft', 'Er isst'] }
   ];
@@ -632,7 +632,7 @@ window.APPDATA = (function () {
   const LTEXTS2 = [
     { n: 'Max beim Tierarzt', t: 'Max muss heu-te zum Tier-arzt. Er hat Angst und zit-tert. Di-a-na sitzt ne-ben ihm und strei-chelt sei-nen Kopf. Die Ärz-tin ist sehr nett. Sie schaut in sei-ne Oh-ren und auf die Pfo-ten. Max ist ge-sund! Zur Be-loh-nung be-kommt er ei-nen Hun-de-keks.', q: 'Was bekommt Max zur Belohnung?', a: 'Einen Hundekeks', w: ['Eine Wurst', 'Einen Ball'] },
     { n: 'Der Schneemann', t: 'Heu-te hat es viel ge-schneit. Di-a-na und Ke-vin bau-en ei-nen Schnee-mann. Er be-kommt ei-ne Mö-hre als Na-se und zwei Stei-ne als Au-gen. Max springt um den Schnee-mann he-rum und bellt. Dann klaut er die Mö-hre und rennt weg!', q: 'Wer klaut die Möhre?', a: 'Max', w: ['Schmanny', 'Kevin'] },
-    { n: 'Schmanny und der Vogel', t: 'Schman-ny sitzt am Fens-ter. Drau-ßen auf dem Baum sitzt ein klei-ner Vo-gel. Schman-ny macht ganz gro-ße Au-gen. Ihr Schwanz zuckt hin und her. Doch das Fens-ter ist zu. Der Vo-gel singt ein Lied und fliegt weg.', q: 'Warum fängt Schmanny den Vogel nicht?', a: 'Das Fenster ist zu', w: ['Sie schläft', 'Der Vogel ist zu groß'] },
+    { n: 'Schmanny und der Vogel', t: 'Schman-ny sitzt am Fens-ter. Drau-ßen auf dem Baum sitzt ein klei-ner Vo-gel. Schman-ny macht ganz gro-ße Au-gen. Sein Schwanz zuckt hin und her. Doch das Fens-ter ist zu. Der Vo-gel singt ein Lied und fliegt weg.', q: 'Warum fängt Schmanny den Vogel nicht?', a: 'Das Fenster ist zu', w: ['Er schläft', 'Der Vogel ist zu groß'] },
     { n: 'Die Eisprinzessin', t: 'Di-a-na zieht ihr Glit-zer-kleid an. Heu-te gibt es ei-ne Show auf der Eis-bahn. Sie fährt ei-nen gro-ßen Kreis. Dann springt sie hoch und dreht sich in der Luft. Al-le Leu-te klat-schen. Ma-ma ist sehr stolz auf sie.', q: 'Was macht Diana in der Luft?', a: 'Sie dreht sich', w: ['Sie singt', 'Sie winkt'] },
     { n: 'Pablo backt', t: 'Pa-blo will ei-nen Ku-chen ba-cken. Er nimmt Mehl, Ei-er, Zu-cker und But-ter. Dann hat er ei-ne I-dee: Chi-li kommt auch hi-nein! Der Ku-chen sieht le-cker aus. A-ber kei-ner will ihn es-sen. Nur Pa-blo isst ihn ganz al-lein.', q: 'Was tut Pablo noch in den Kuchen?', a: 'Chili', w: ['Schoki', 'Äpfel'] },
     { n: 'Regentag', t: 'Drau-ßen reg-net es schon den gan-zen Tag. Max will nicht raus. Er legt sich un-ter den Tisch. Di-a-na malt ein Bild von Max und Schman-ny. Dann macht sie Mu-sik an und tanzt durch das Zim-mer. Am A-bend scheint die Son-ne wie-der.', q: 'Wo liegt Max?', a: 'Unter dem Tisch', w: ['Auf dem Sofa', 'Im Garten'] },
@@ -648,9 +648,9 @@ window.APPDATA = (function () {
     { n: 'Pablos Geheimnis', t: 'Pa-blo hat ein Ge-heim-nis. Je-de Nacht, wenn al-le schla-fen, schleicht er in die Kü-che. Dort öff-net er lei-se den Kühl-schrank. Er sucht nicht nach Kä-se o-der Wurst. Er sucht nach Chi-lis! Ei-nes Nachts geht das Licht an. Ma-ma steht in der Tür und schaut ihn an. Pa-blo hat ei-ne Chi-li im Mund und wird knall-rot.', q: 'Warum geht Pablo nachts in die Küche?', a: 'Er sucht Chilis', w: ['Er hat Durst', 'Er will Käse'] },
     { n: 'Das Konzert', t: 'Di-a-na und ih-re Freun-din wol-len ein Kon-zert ge-ben. Sie stel-len Stüh-le ins Wohn-zim-mer. Ma-ma, An-dre-as und Max sind die Zu-schau-er. Schman-ny will nicht zu-hö-ren und geht in den Flur. Die Mäd-chen sin-gen zwei Lie-der und tan-zen da-zu. Beim drit-ten Lied heult Max laut mit. Da müs-sen al-le so la-chen, dass das Kon-zert vor-bei ist.', q: 'Warum ist das Konzert vorbei?', a: 'Alle lachen über Max', w: ['Der Strom ist weg', 'Mama geht schlafen'] },
     { n: 'Ein Brief von Kevin', t: 'Im Brief-kas-ten liegt ein Brief. Auf dem Um-schlag steht: Für Di-a-na. Den hat Ke-vin ge-schickt! Di-a-na öff-net ihn ganz vor-sich-tig. In dem Brief ist ein Bild von ei-nem Hund mit Son-nen-bril-le. Da-run-ter steht: So sieht Max im Som-mer aus. Di-a-na muss la-chen. Sie hängt das Bild an ih-re Tür.', q: 'Was ist auf dem Bild?', a: 'Ein Hund mit Sonnenbrille', w: ['Eine Katze mit Hut', 'Ein Schneemann'] },
-    { n: 'Schmanny im Schrank', t: 'Ma-ma legt die fri-schen Hand-tü-cher in den Schrank. Dann ruft sie: „Wo ist ei-gent-lich Schman-ny?“ Al-le su-chen die Kat-ze. Sie ist nicht auf dem So-fa und nicht im Bett. Nach ei-ner Stun-de hört Di-a-na ein lei-ses Mi-au. Es kommt aus dem Schrank! Schman-ny liegt zwi-schen den war-men Hand-tü-chern und schläft.', q: 'Warum liegt Schmanny im Schrank?', a: 'Die Handtücher sind warm', w: ['Sie hat Angst vor Max', 'Sie sucht Futter'] },
+    { n: 'Schmanny im Schrank', t: 'Ma-ma legt die fri-schen Hand-tü-cher in den Schrank. Dann ruft sie: „Wo ist ei-gent-lich Schman-ny?“ Al-le su-chen den Ka-ter. Er ist nicht auf dem So-fa und nicht im Bett. Nach ei-ner Stun-de hört Di-a-na ein lei-ses Mi-au. Es kommt aus dem Schrank! Schman-ny liegt zwi-schen den war-men Hand-tü-chern und schläft.', q: 'Warum liegt Schmanny im Schrank?', a: 'Die Handtücher sind warm', w: ['Er hat Angst vor Max', 'Er sucht Futter'] },
     { n: 'Rückwärts fahren', t: 'Rück-wärts fah-ren ist schwer. Di-a-na übt es die gan-ze Wo-che auf der Eis-bahn. Am Mon-tag fällt sie drei-mal hin. Am Mitt-woch fällt sie nur noch ein-mal hin. Am Frei-tag fährt sie ei-ne gan-ze Run-de rück-wärts, oh-ne hin-zu-fal-len! Der Trai-ner klatscht in die Hän-de. „Siehst du“, sagt er, „Ü-ben hilft!“', q: 'Wann schafft Diana eine ganze Runde?', a: 'Am Freitag', w: ['Am Montag', 'Am Mittwoch'] },
-    { n: 'Das Wettrennen', t: 'Max und Schman-ny ma-chen ein Wett-ren-nen. Max ist schnell, a-ber er rennt nicht ge-ra-de-aus. Er schnüf-felt an je-dem Baum und je-dem Stein. Schman-ny läuft lang-sam, a-ber im-mer wei-ter. Am En-de ist Schman-ny zu-erst am Ziel. Max kommt viel spä-ter an. Er hat ei-nen Stock im Maul und ist trotz-dem glück-lich.', q: 'Warum gewinnt Schmanny?', a: 'Sie läuft immer weiter', w: ['Sie ist schneller als Max', 'Max schläft ein'] },
+    { n: 'Das Wettrennen', t: 'Max und Schman-ny ma-chen ein Wett-ren-nen. Max ist schnell, a-ber er rennt nicht ge-ra-de-aus. Er schnüf-felt an je-dem Baum und je-dem Stein. Schman-ny läuft lang-sam, a-ber im-mer wei-ter. Am En-de ist Schman-ny zu-erst am Ziel. Max kommt viel spä-ter an. Er hat ei-nen Stock im Maul und ist trotz-dem glück-lich.', q: 'Warum gewinnt Schmanny?', a: 'Er läuft immer weiter', w: ['Er ist schneller als Max', 'Max schläft ein'] },
     { n: 'Zug nach Hamburg', t: 'Di-a-na fährt mit dem Zug nach Ham-burg. Sie be-sucht Ke-vin. Der Zug fährt sehr schnell. Durch das Fens-ter sieht sie Kü-he, Wäl-der und klei-ne Dör-fer. Nach ei-ner Stun-de ist sie da. Ke-vin war-tet schon am Bahn-steig. Er hält ein Schild in der Hand. Da-rauf steht: Herz-lich will-kom-men, Po-pa!', q: 'Wo wartet Kevin?', a: 'Am Bahnsteig', w: ['Zu Hause', 'Im Kino'] }
   ];
   const LTEXTS4 = [
@@ -661,7 +661,7 @@ window.APPDATA = (function () {
     { n: 'Am Meer', t: 'Am Sonntag fahren alle zusammen an die Ostsee. Am Strand weht ein kalter Wind, aber die Sonne scheint. Diana sammelt Muscheln und kleine Steine. Andreas zeigt ihr einen Stein mit einem Loch in der Mitte. „Das ist ein Hühnergott“, sagt er. „Der bringt Glück.“ Max rennt den Möwen hinterher, aber er fängt keine einzige. Zum Mittag gibt es Fischbrötchen. Diana nimmt den Stein mit nach Hause und legt ihn auf ihr Fensterbrett.', q: 'Was ist ein Hühnergott?', a: 'Ein Stein mit Loch', w: ['Ein Vogel', 'Eine Muschel'] },
     { n: 'Die Nacht im Zelt', t: 'Im Sommer darf Diana mit Andreas im Garten zelten. Sie nehmen Schlafsäcke, Taschenlampen und Kekse mit. Als es dunkel wird, hören sie viele Geräusche. Etwas raschelt im Gebüsch. Diana hält die Luft an. Andreas leuchtet mit der Taschenlampe hin. Zwei kleine Augen funkeln. Es ist nur ein Igel, der Käfer sucht. Diana flüstert: „Gute Nacht, Igel.“ Dann kuschelt sie sich in ihren Schlafsack und schläft sofort ein. Max schnarcht vor dem Zelt.', q: 'Was raschelt im Gebüsch?', a: 'Ein Igel', w: ['Max', 'Ein Fuchs'] },
     { n: 'Das Armband', t: 'Diana hat ein Armband aus bunten Perlen. Sie hat es selbst gemacht und trägt es jeden Tag. Nach dem Sport ist es plötzlich weg. Sie sucht in der Turnhalle, in der Umkleide und auf dem Schulhof. Nichts. Zu Hause ist sie traurig und will nicht einmal tanzen. Am nächsten Morgen kommt ihre Freundin zu ihr. Sie hält etwas in der Hand. „Das lag unter der Bank“, sagt sie. Diana fällt ihr um den Hals. Dann macht sie für ihre Freundin auch ein Armband.', q: 'Warum macht Diana ihrer Freundin ein Armband?', a: 'Als Dankeschön', w: ['Weil sie zwei hat', 'Weil Mama es sagt'] },
-    { n: 'Leseprofi', t: 'Kevin hat ein Spiel für Diana gebaut. Darin gibt es einen Hund, eine Katze und einen frechen Pablo. Diana kann darin lesen, rechnen und sogar Russisch lernen. Am Anfang findet sie manche Aufgaben langweilig. Doch dann merkt sie etwas: Die Texte werden immer länger, und sie kann sie trotzdem lesen. Früher hat sie für einen kurzen Text eine Minute gebraucht. Heute schafft sie einen langen Text in der gleichen Zeit. Sie schickt Kevin eine Nachricht: „Ich bin jetzt Leseprofi!“', q: 'Was merkt Diana?', a: 'Sie kann lange Texte lesen', w: ['Das Spiel ist kaputt', 'Pablo schummelt'] }
+    { n: 'Leseprofi', t: 'Kevin hat ein Spiel für Diana gebaut. Darin gibt es einen Hund, einen Kater und einen frechen Pablo. Diana kann darin lesen, rechnen und sogar Russisch lernen. Am Anfang findet sie manche Aufgaben langweilig. Doch dann merkt sie etwas: Die Texte werden immer länger, und sie kann sie trotzdem lesen. Früher hat sie für einen kurzen Text eine Minute gebraucht. Heute schafft sie einen langen Text in der gleichen Zeit. Sie schickt Kevin eine Nachricht: „Ich bin jetzt Leseprofi!“', q: 'Was merkt Diana?', a: 'Sie kann lange Texte lesen', w: ['Das Spiel ist kaputt', 'Pablo schummelt'] }
   ];
   const LSTUFEN = [
     { n: 'Stufe 1 · kurz', syl: true, texts: LTEXTS },
@@ -694,6 +694,7 @@ window.APPDATA.STARTS = ['Let’s go!', 'Los geht’s!', 'Auf geht’s!', 'Berei
 
 // ---------- Erklärungen beim ersten Öffnen (Kevin spricht sie ein: Clip-ID 'erk:<key>') ----------
 window.APPDATA.EXPLAIN = {
+  heute: { n: '☀️ Heute', t: 'Das ist dein Plan für heute. Tipp einfach auf „Heute“, dann geht es los: erst das Lese-Training, dann eine kleine Runde. Wenn du das geschafft hast, darfst du alles andere machen, was du willst.' },
   lese: { n: '📖 Lese-Training', t: 'Das ist dein Lese-Training. Es hat drei Teile. Erst kommt der Silbenteppich: Lies die Silben laut und tipp jede an, 30 Sekunden lang. Dann kommen Blitzwörter: Ein Wort blitzt kurz auf, und du tippst, welches es war. Zum Schluss liest du einen kleinen Text zweimal laut und beantwortest eine Frage. Wenn du gut liest, werden die Texte länger, und du bekommst einen Stern mehr.' },
   math: { n: '⛸️ Eisbahn', t: 'Willkommen auf der Eisbahn! Hier rechnest du. Tipp auf die richtige Antwort. Wenn du nicht weiterweißt, tipp auf die Glühbirne, dann bekommst du einen Tipp. In der Mitte jeder Runde gibt es eine Tanz-Pause.' },
   read: { n: '🏊 Schwimmbad', t: 'Das ist das Schwimmbad. Hier übst du Buchstaben, Silben, Wörter und Sätze. Manchmal hörst du etwas und tippst es an, manchmal liest du Max laut vor. Sag ehrlich, ob es geklappt hat. So lernst du am meisten.' },

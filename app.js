@@ -330,7 +330,7 @@ ${mouth}${ball}${acc}</svg>`;
       ? `<path d="M92 60 L95 72 M100 57 L100 70 M108 60 L105 72 M56 170 L72 164 M144 170 L128 164 M58 186 L74 180" stroke="${C.dark}" stroke-width="5" stroke-linecap="round"/>`
       : C.faint ? `<path d="M92 61 L94.5 71 M100 59 L100 70 M108 61 L105.5 71" stroke="${C.dark}" stroke-width="3.5" stroke-linecap="round" opacity=".35"/>` : '';
     const WLc = opt.noAcc ? { under: '', over: '' } : wearLayers(opt.worn || state.stickers.wornCat || {}, 'cat', C.fur);
-    return `<svg viewBox="0 0 200 222" class="cat ${opt.cls || ''}" aria-label="Schmanny, die Katze" role="img">
+    return `<svg viewBox="0 0 200 222" class="cat ${opt.cls || ''}" aria-label="Schmanny, der Kater" role="img">
 <path class="tail" d="M142 204 Q196 204 186 160 Q182 146 190 136" stroke="${C.fur}" stroke-width="18" fill="none" stroke-linecap="round"/>
 <path d="M46 214 Q36 156 78 136 L122 136 Q164 156 154 214Z" fill="${C.fur}"/>
 <path d="M80 146 Q100 136 120 146 Q124 182 100 200 Q76 182 80 146Z" fill="${C.light}" opacity="${C.chestOp || 1}"/>
@@ -537,6 +537,8 @@ ${mouth}</svg>`;
       else if (wasNew) { s.b = 2; s.d = today + 1; }
       else if (s.d > today) { /* Extra-Übung, nicht fällig: Kasten bleibt */ }
       else { s.b = Math.min(6, s.b + 1); s.d = today + INTERVAL[s.b]; }
+      // Selbst bewertet (vorlesen/sprechen): höchstens „geübt“ – „sicher“ nur über Aufgaben, die die App prüft
+      if (info.self && s.b > 2) { s.b = 2; s.d = Math.min(s.d, today + 2); }
     } else {
       s.w++; s.b = 1; s.d = today; if (S) S.wrongSet.add(id);
     }
@@ -570,7 +572,8 @@ ${mouth}</svg>`;
   function buildSession(pools, N) {
     const today = dayNum();
     const due = {};
-    pools.forEach((p) => { due[p] = allSeen(p).filter((k) => state.items[k].d <= today).sort((x, y) => (state.items[x].d - state.items[y].d) || (state.items[x].b - state.items[y].b)); });
+    const inRound = (k) => !k.startsWith('hw:'); // Blitzwörter übt das Lese-Training
+    pools.forEach((p) => { due[p] = allSeen(p).filter((k) => inRound(k) && state.items[k].d <= today).sort((x, y) => (state.items[x].d - state.items[y].d) || (state.items[x].b - state.items[y].b)); });
     const acc = accuracy();
     const newQ = state.recent.length < 10 ? 4 : acc >= 0.9 ? 5 : acc >= 0.8 ? 3 : acc >= 0.65 ? 2 : 1;
     const reviews = []; let i = 0;
@@ -587,7 +590,7 @@ ${mouth}</svg>`;
     }
     let known = [];
     if (reviews.length + news.length < N) {
-      known = pools.flatMap(allSeen).filter((k) => !reviews.includes(k) && box(k) >= 2).sort((x, y) => state.items[x].l - state.items[y].l).slice(0, N - reviews.length - news.length);
+      known = pools.flatMap(allSeen).filter((k) => inRound(k) && !reviews.includes(k) && box(k) >= 2).sort((x, y) => state.items[x].l - state.items[y].l).slice(0, N - reviews.length - news.length);
     }
     const warm = reviews.slice(0, 3);
     let rest = shuffle(reviews.slice(3).concat(news, known));
@@ -674,11 +677,12 @@ ${mouth}</svg>`;
     if (S.wrongSet && S.wrongSet.size) lines.push('Schwer heute: ' + [...S.wrongSet].slice(0, 5).map(itemLabel).join(' · '));
     lines.push('', lernstandText());
     const title = `${state.name || 'Diana'} hat geübt ${pct >= 80 ? '⭐' : '✅'}`;
-    sendReport(title, lines.join('\n'));
+    sendReport(title, lines.join('\n'), 2);
   }
-  function sendReport(title, msg) {
+  // prio: 1 = still in der Liste, 2 = leise (kein Ton), 3 = normale Benachrichtigung
+  function sendReport(title, msg, prio) {
     if (VIEWER || state.settings.report === false) return;
-    state.outbox = (state.outbox || []).concat([{ title, msg, at: Date.now() }]).slice(-20); save(); flushReports();
+    state.outbox = (state.outbox || []).concat([{ title, msg, at: Date.now(), prio: prio || 3 }]).slice(-20); save(); flushReports();
     setTimeout(() => pushSnapshot(false), 1500);
   }
   // Wo ist sie gerade? (für Kevin)
@@ -763,12 +767,12 @@ ${mouth}</svg>`;
     } catch (e) { }
   }
   let openedAt = Date.now(), hiddenAt = 0;
-  function appOpened(first) { if (VIEWER) return; openedAt = Date.now(); sendReport(`${state.name || 'Diana'} hat die App geöffnet 📱`, first ? 'App gestartet.' : 'Zurück in der App.'); }
+  function appOpened(first) { if (VIEWER) return; openedAt = Date.now(); sendReport(`${state.name || 'Diana'} hat die App geöffnet 📱`, first ? 'App gestartet.' : 'Zurück in der App.', 1); }
   setTimeout(() => appOpened(true), 2500);
   setTimeout(pollCommands, 4000); setInterval(pollCommands, 60000);
   document.addEventListener('visibilitychange', () => {
     if (VIEWER) return;
-    if (document.hidden) { hiddenAt = Date.now(); pushSnapshot(true); const min = Math.max(1, Math.round((Date.now() - openedAt) / 60000)); sendReport(`${state.name || 'Diana'} hat die App verlassen`, `Nach ${min} Min. Zuletzt: ${state.where || '–'}.`); }
+    if (document.hidden) { hiddenAt = Date.now(); pushSnapshot(true); const min = Math.max(1, Math.round((Date.now() - openedAt) / 60000)); const d = state.days[dayKey(dayNum())]; sendReport(`${state.name || 'Diana'} war ${min} Min. in der App`, `Heute: ${d ? `${d.s} ${d.s === 1 ? 'Runde' : 'Runden'}, ${d.r} von ${d.t} richtig` : 'keine Runde'} · Lese-Training: ${leseToday() ? 'ja ✓' : 'nein'}\nZuletzt: ${state.where || '–'}`, 3); }
     else if (hiddenAt && Date.now() - hiddenAt > 10 * 60000) { appOpened(false); pollCommands(); }
   });
   async function flushReports() {
@@ -776,7 +780,7 @@ ${mouth}</svg>`;
     for (const m of box) {
       try {
         const when = new Date(m.at).toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-        const r = await fetch(`https://ntfy.sh/${REPORT_TOPIC}?title=${encodeURIComponent(m.title)}&tags=books`, { method: 'POST', body: `${when}\n${m.msg}` });
+        const r = await fetch(`https://ntfy.sh/${REPORT_TOPIC}?title=${encodeURIComponent(m.title)}&tags=books&priority=${m.prio || 3}`, { method: 'POST', body: `${when}\n${m.msg}` });
         if (!r.ok) return;
         state.outbox = state.outbox.filter((x) => x !== m && x.at !== m.at); save();
       } catch (e) { return; }
@@ -968,7 +972,7 @@ ${mouth}</svg>`;
     const scr = h('main', { class: 'screen map' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Was ist was?')),
       h('p', { class: 'note' }, 'Tipp auf etwas, dann erklärt Kevin es dir nochmal.'),
-      h('div', { class: 'help-list' }, Object.entries(D.EXPLAIN || {}).map(([k, E]) => h('button', { class: 'tile', onclick: () => explain(k) }, E.n))));
+      h('div', { class: 'help-list' }, Object.entries(D.EXPLAIN || {}).filter(([k]) => k !== 'mix').map(([k, E]) => h('button', { class: 'tile', onclick: () => explain(k) }, E.n))));
     mount(scr, 'home');
   }
   function showHome(greet) {
@@ -983,18 +987,26 @@ ${mouth}</svg>`;
     catEl.addEventListener('click', () => tapSay('cat', 'p:miau'));
     pabloEl.addEventListener('click', () => { pabloEl.classList.remove('wiggle'); void pabloEl.offsetWidth; pabloEl.classList.add('wiggle'); tapSay('pablo', 'p:pablohi'); });
     const go = (world, clip) => () => { SFX.tap(); explain(world, () => startSession(world, clip)); };
+    const leseOk = leseToday(), roundOk = sessionsToday() >= 1;
+    const todayRun = () => { if (!leseOk) explain('lese', () => showLeseTraining({ then: () => explain('mix', () => startSession('mix', 'p:mix')) })); else if (!roundOk) explain('mix', () => startSession('mix', 'p:mix')); else { SFX.fanfare(); toast('Heute alles geschafft! Jetzt hast du frei.', '🎉'); } };
+    const todayCard = can ? h('button', { class: 'today' + (leseOk && roundOk ? ' done' : ''), id: 'go-today', onclick: () => { SFX.tap(); explain('heute', todayRun); } },
+      h('span', { class: 't-sun' }, leseOk && roundOk ? '🎉' : '☀️'),
+      h('span', { class: 't-main' }, h('span', { class: 't-name' }, leseOk && roundOk ? 'Heute geschafft!' : 'Heute'),
+        h('span', { class: 't-steps' }, h('span', { class: 't-step' + (leseOk ? ' ok' : '') }, (leseOk ? '✓' : '1') + ' Lese-Training'), h('span', { class: 't-step' + (roundOk ? ' ok' : '') }, (roundOk ? '✓' : '2') + ' Kleine Runde'))),
+      h('span', { class: 't-go' }, leseOk && roundOk ? 'Frei!' : 'Los ▶')) : null;
     const worlds = can
       ? h('div', { class: 'worlds' },
         h('button', { class: 'world lese' + (leseToday() ? ' done' : ''), id: 'go-lese', onclick: () => { SFX.tap(); explain('lese', showLeseTraining); } }, h('span', { class: 'w-ico' }, '📖'), h('span', { class: 'w-name' }, 'Lese-Training'), h('span', { class: 'w-sub' }, leseToday() ? 'Heute geschafft ✓' : '5 Minuten, jeden Tag')),
         h('button', { class: 'world ice', id: 'go-math', onclick: go('math', 'p:eisbahn') }, h('span', { class: 'w-ico' }, '⛸️'), h('span', { class: 'w-name' }, 'Eisbahn'), h('span', { class: 'w-sub' }, 'Rechnen'), h('span', { class: 'w-demo' }, '13 − 5')),
         h('button', { class: 'world pool', id: 'go-read', onclick: go('read', 'p:schwimmbad') }, h('span', { class: 'w-ico' }, '🏊'), h('span', { class: 'w-name' }, 'Schwimmbad'), h('span', { class: 'w-sub' }, 'Lesen'), h('span', { class: 'w-demo' }, h('span', { class: 'sy s0' }, 'Le'), h('span', { class: 'sy s1' }, 'sen'))),
-        h('button', { class: 'world ru', id: 'go-ru', onclick: go('ru', 'p:russisch') }, h('span', { class: 'w-ico' }, '🗣️'), h('span', { class: 'w-name' }, 'Russisch'), h('span', { class: 'w-sub' }, 'Reden & Verstehen'), h('span', { class: 'w-demo' }, 'Привет!')),
-        h('button', { class: 'world mix', id: 'go-mix', onclick: go('mix', 'p:mix') }, h('span', { class: 'w-ico' }, '🎲'), h('span', { class: 'w-name' }, 'Alles gemischt'), h('span', { class: 'w-sub' }, 'von allem etwas')))
+        h('button', { class: 'world ru', id: 'go-ru', onclick: go('ru', 'p:russisch') }, h('span', { class: 'w-ico' }, '🗣️'), h('span', { class: 'w-name' }, 'Russisch'), h('span', { class: 'w-sub' }, 'Reden & Verstehen'), h('span', { class: 'w-demo' }, 'Привет!')))
       : h('div', { class: 'sleep-card' }, h('p', { class: 'h-display' }, 'Max schläft. Morgen geht’s weiter!'), h('p', { class: 'note' }, 'Tanz-Idee für jetzt:'), textEl(pick(D.DANCES), { cls: 'small' }));
     const scr = h('main', { class: 'screen home' },
       h('header', { class: 'home-head' }, h('h1', { class: 'hello' }, `Hallo, ${state.name}!`), TEST() ? h('p', { class: 'test-chip' }, '🧪 Test-Modus: alles frei') : null, dayStrip()),
       h('div', { class: 'scene' }, catEl, maxEl, pabloEl),
       can && testAvailable() ? h('button', { class: 'test-banner', id: 'go-test', onclick: () => { SFX.tap(); explain('test', startTest); } }, h('span', { class: 't-ico' }, '🏅'), h('span', null, h('strong', null, 'Test-Zeit!'), h('small', null, 'Zeig, was du schon kannst'))) : null,
+      todayCard,
+      can ? h('p', { class: 'or-pick' }, 'Oder such dir selbst etwas aus:') : null,
       worlds,
       missionCard(),
       h('nav', { class: 'minor' },
@@ -1038,7 +1050,7 @@ ${mouth}</svg>`;
         const first = !S.seenKind[t.kind]; S.seenKind[t.kind] = 1;
         setTimeout(() => {
           if (!document.body.contains(scr)) return;
-          let parts = fn(first || autoAll) || [];
+          let parts = fn(first || autoAll || poolOf(t.id) === 'ru') || [];
           if (S && S.intro) { parts = [S.test ? P(S.intro) : varied(D.STARTS, 's', P(S.intro))].concat(parts); S.intro = null; }
           if (parts.length) Voice.say(parts);
         }, 350);
@@ -1132,7 +1144,7 @@ ${mouth}</svg>`;
       const fb = (ui.feedback && ui.feedback(ok, o)) || {};
       if (poolOf(t.id) === 'ru') fb.ru = true;
       const dt = performance.now() - (t.t0 || performance.now());
-      grade(t.id, ok, { helped: ui.helps >= 2, fast: dt < (ui.fastMs || 7000) });
+      grade(t.id, ok, { helped: ui.helps >= 2, fast: dt < (ui.fastMs || 7000), self: !!ui.self });
       if (!t.retry) { S.done++; if (ok) S.right++; }
       if (t.isNew) S.newWrongStreak = ok ? 0 : S.newWrongStreak + 1;
       S.streak = ok ? (S.streak || 0) + 1 : 0;
@@ -1357,7 +1369,7 @@ ${mouth}</svg>`;
       const I = mathInfo(t.id);
       ui.prompt(I.op === '+' ? 'Schau aufs Bild: Wie viele sind es zusammen?' : 'Schau aufs Bild: Wie viele bleiben übrig?', 'p:zeigen');
       ui.stage.append(h('p', { class: 'expr' }, exprText(I)), fieldEl(I) || h('span'));
-      ui.choices(numOpts(I.c, [I.c + 1, I.c - 1, I.c + 2, I.c - 2, I.a, I.b]).map((v) => ({ label: String(v), value: v })), (v) => v === I.c, 'nums');
+      ui.choices(numOpts(I.c, [I.c + 1, I.c - 1, I.c + 2, I.c - 2].concat(I.op === '+' ? [] : [I.a + I.b])).map((v) => ({ label: String(v), value: v })), (v) => v === I.c, 'nums');
       ui.feedback = () => mathFb(I);
       ui.audio((full) => (full ? [ui.promptPart, mathPart(I)] : [mathPart(I)]), true);
     },
@@ -1403,7 +1415,7 @@ ${mouth}</svg>`;
       else txt = sub(pick(D.PM_STORIES[I.op]).replace('{a}', I.a).replace('{b}', I.b));
       ui.prompt('Hör gut zu und rechne!', 'p:geschichte');
       const slot = h('span', { class: 'slot' }, '?');
-      ui.stage.append(h('p', { class: 'story-q' }, txt), vis, h('p', { class: 'expr small' }, 'Das sind ', slot));
+      ui.stage.append(...[h('p', { class: 'story-q' }, txt), vis, h('p', { class: 'expr small' }, 'Das sind ', slot)].filter(Boolean));
       ui.answers.replaceChildren(numpad((v) => { slot.classList.add(v === I.c ? 'right' : 'wrong'); ui.done(v === I.c); }, slot));
       ui.feedback = () => mathFb(I);
       ui.audio(() => [{ text: txt }], true);
@@ -1475,7 +1487,7 @@ ${mouth}</svg>`;
     },
     anlaut(t, ui) {
       const L = LBY[t.id.slice(2)];
-      ui.prompt(L.in ? 'Welchen Buchstaben hörst du?' : 'Womit fängt das Wort an?', L.in ? 'p:innen' : 'p:anlaut');
+      ui.prompt(L.in ? D.PROMPTS['p:innen'] : 'Womit fängt das Wort an?', L.in ? 'p:innen' : 'p:anlaut');
       ui.stage.append(h('div', { class: 'pic', 'aria-label': L.w }, L.e));
       if (!S.test) tipButton(ui, () => letterTip(L));
       const opts = shuffle([L.g, ...L.c]).map((g) => ({ el: h('span', { class: 'let' }, letterLabel(g)), value: g }));
@@ -1597,7 +1609,7 @@ ${mouth}</svg>`;
   function ruSelfCheck(t, ui, o) {
     ui.prompt(o.promptText, o.promptClip);
     ui.stage.append(o.visual);
-    if (o.help) ui.stage.append(h('button', { class: 'tile help-btn', onclick: () => { ui.helps++; Voice.say(o.help); } }, 'Was heißt das? (Deutsch)'));
+    if (o.help) ui.stage.append(h('button', { class: 'tile help-btn', onclick: () => { ui.helps++; Voice.say(o.help); } }, '🇩🇪 Was heißt das auf Deutsch?'));
     const doneBtn = h('button', { class: 'tile go', id: 'say-done', onclick: () => {
       if (S.locked) return; SFX.tap();
       ui.prompt('Hör mal, so heißt es. Hast du es richtig gesagt?', 'p:rukontrolle');
@@ -1607,7 +1619,7 @@ ${mouth}</svg>`;
         h('button', { class: 'tile ans', onclick: () => ui.done(true) }, '✓ Richtig gesagt'),
         h('button', { class: 'tile ans', onclick: () => ui.done(false) }, '↻ Nochmal üben'));
     } }, 'Fertig gesagt');
-    ui.answers.className = 'answers one'; ui.answers.replaceChildren(doneBtn);
+    ui.answers.className = 'answers one'; ui.answers.replaceChildren(doneBtn); ui.self = true;
     ui.feedback = (ok) => ({ title: ok ? 'Молодец! Du sprichst super Russisch.' : 'Gut, dass du ehrlich bist. Das üben wir gleich nochmal.', detail: o.detail, voice: ok ? [] : o.modelParts });
     ui.audio((full) => (full ? [ui.promptPart].concat(o.autoParts) : o.autoParts), true);
   }
@@ -1772,7 +1784,7 @@ ${mouth}</svg>`;
         h('button', { class: 'tile ans', onclick: () => ui.done(true) }, '✓ Richtig gelesen'),
         h('button', { class: 'tile ans', onclick: () => ui.done(false) }, '↻ Nochmal üben'));
     } }, 'Fertig gelesen');
-    ui.answers.className = 'answers one'; ui.answers.replaceChildren(doneBtn);
+    ui.answers.className = 'answers one'; ui.answers.replaceChildren(doneBtn); ui.self = true;
     ui.feedback = (ok) => ({ title: ok ? 'Toll vorgelesen! Max wedelt mit dem Schwanz.' : 'Gut, dass du ehrlich bist. Das üben wir gleich nochmal.' });
     ui.audio((full) => (full ? [ui.promptPart] : null));
   }
@@ -1821,12 +1833,13 @@ ${mouth}</svg>`;
   // ---------- Trickbuch ----------
   function showTricks(back) {
     back = back || showHome;
-    const list = h('div', { class: 'tricks' }, Object.entries(D.TRICKS).map(([k, T]) => {
-      const seen = TEST() || !!state.tricks[k];
+    const locked = Object.keys(D.TRICKS).filter((k) => !(TEST() || state.tricks[k])).length;
+    const list = h('div', { class: 'tricks' }, Object.entries(D.TRICKS).filter(([k]) => TEST() || state.tricks[k]).map(([k, T]) => {
+      const seen = true;
       return h('div', { class: 'trick' + (seen ? '' : ' locked') }, h('p', { class: 'trick-n' }, seen ? '💡 ' + T.n : '🔒 Noch geheim'), seen ? h('p', { class: 'trick-d' }, T.d) : h('p', { class: 'trick-d' }, 'Tippe in einer Aufgabe auf „💡 Tipp“, dann findest du neue Tricks.'),
         seen ? h('button', { class: 'p-btn', onclick: () => Voice.say([{ id: 'trick:' + k, text: T.n + '. ' + T.d }]) }, '🔊') : null);
     }));
-    mount(h('main', { class: 'screen map' }, h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => back()), h('h1', { class: 'h-display' }, 'Mein Trickbuch')), list), 'home');
+    mount(h('main', { class: 'screen map' }, h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => back()), h('h1', { class: 'h-display' }, 'Mein Trickbuch')), list, locked ? h('div', { class: 'trick locked' }, h('p', { class: 'trick-n' }, `🔒 Noch ${locked} ${locked === 1 ? 'Trick' : 'Tricks'} geheim`), h('p', { class: 'trick-d' }, 'Tippe in einer Aufgabe auf „💡 Tipp“, dann findest du neue Tricks.')) : null), 'home');
   }
 
   // ---------- Post von Kevin ----------
@@ -1838,7 +1851,7 @@ ${mouth}</svg>`;
     const scr = h('main', { class: 'screen map' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Post von Kevin')),
       un.length ? list : h('p', { class: 'note' }, 'Noch keine Post. Übe ein paar Tage, dann kommt ein Brief!'),
-      next ? h('p', { class: 'note' }, `Nächster Brief nach ${next.tag} Übungstagen. Du hast ${practiceDays()}.`) : null);
+      next ? h('p', { class: 'note' }, `Nächster Brief nach ${next.tag} ${next.tag === 1 ? 'Übungstag' : 'Übungstagen'}. Du hast ${practiceDays()}.`) : null);
     mount(scr, 'home');
   }
   function showPost(i) {
@@ -2032,7 +2045,7 @@ ${mouth}</svg>`;
     const draw = (cls) => (who === 'max' ? svgEl(svgMax({ mood: 'happy' }), 'c-max ' + (cls || '')) : svgEl(svgCat({ mood: 'bored' }), 'c-cat ' + (cls || '')));
     const maxBox = h('div', { class: 'album-max' }, draw());
     const redraw = () => maxBox.replaceChildren(draw('hop'));
-    const shown = D.STICKERS.filter((s) => cat === 'alle' || s.k === cat);
+    const inCat = D.STICKERS.filter((s) => cat === 'alle' || s.k === cat); const shown = inCat.filter((s) => TEST() || state.stickers.owned.includes(s.id)); const hiddenN = inCat.length - shown.length;
     const grid = h('div', { class: 'stickers' }, shown.map((s) => {
       const own = TEST() || state.stickers.owned.includes(s.id);
       const worn = W[s.s] === s.id;
@@ -2055,8 +2068,8 @@ ${mouth}</svg>`;
         h('button', { class: 'tile', id: 'runway', onclick: () => { SFX.fanfare(); maxBox.classList.remove('runway'); void maxBox.offsetWidth; maxBox.classList.add('runway'); setTimeout(() => maxBox.classList.remove('runway'), 4200); } }, '📸 Laufsteg'),
         h('button', { class: 'tile', id: 'undress', onclick: () => { Object.keys(W).forEach((k) => delete W[k]); save(); showAlbum(who, cat); } }, '🧺 Alles ausziehen')),
       h('div', { class: 'chips pick cat-filter' }, D.STICKER_CATS.map(([k, n]) => h('button', { class: 'chip' + (k === cat ? ' on' : ''), onclick: () => showAlbum(who, k) }, n))),
-      h('p', { class: 'note' }, `${state.stickers.owned.length} von ${D.STICKERS.length} gefunden. Neue gibt es manchmal nach einer Runde.`),
-      grid);
+      grid,
+      hiddenN ? h('div', { class: 'stk-more' }, h('span', { class: 'stk-more-e' }, '🎁'), h('span', null, `Noch ${hiddenN} ${hiddenN === 1 ? 'Sache' : 'Sachen'} ${cat === 'alle' ? '' : 'hier '}zu entdecken! Neue gibt es nach dem Üben.`)) : h('p', { class: 'note' }, 'Du hast hier schon alles gefunden! 🌟'));
     mount(scr, 'home');
   }
 
@@ -2163,7 +2176,7 @@ ${mouth}</svg>`;
   }
   function clipGroups() {
     const g = [];
-    g.push({ n: 'Menü & Anleitungen', prio: true, items: Object.entries(D.PROMPTS).map(([id, t]) => ({ id, t })) });
+    g.push({ n: 'Menü & Anleitungen', prio: true, items: Object.entries(D.PROMPTS).filter(([id]) => id !== 'p:wau').map(([id, t]) => ({ id, t })) }); // Max-Antippen hat genug eigene Clips
     g.push({ n: 'Lob, Trost & Belohnung', prio: true, items: [].concat(D.PRAISE_CLIPS.map((x) => Object.assign({ hint: 'Lob' }, x)), D.PRAISE_MATH.map((x) => Object.assign({ hint: 'Lob Rechnen' }, x)), D.PRAISE_READ.map((x) => Object.assign({ hint: 'Lob Lesen' }, x)), D.PRAISE_RETRY.map((x) => Object.assign({ hint: 'nach einem Fehler jetzt richtig' }, x)), D.PRAISE_STREAK.map((x) => Object.assign({ hint: '5 richtig hintereinander' }, x)), D.OOPS_CLIPS.map((x) => Object.assign({ hint: 'Trost' }, x)), D.REWARD_CLIPS.map((x) => Object.assign({ hint: 'Belohnung am Rundenende' }, x))) });
     g.push({ n: 'Zahlen für Mal-Aufgaben', prio: true, items: [...Array(10)].map((_, k) => ({ id: 'num:' + (k + 1), t: ['eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn'][k] })).concat([{ id: 'mal', t: 'mal' }]) });
     g.push({ n: 'Buchstaben: Wörter', prio: true, items: D.LETTERS.map((L) => ({ id: 'anl:' + L.g, t: L.w, hint: 'für ' + L.g })) });
@@ -2186,7 +2199,7 @@ ${mouth}</svg>`;
     g.push({ n: 'Einführung (Kevin erklärt die App)', prio: true, items: (D.TOUR || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: 'Begrüßungen beim Öffnen', items: (D.GREETS || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: 'Kurze Starts bei Übungen', items: (D.STARTS || []).map((x) => ({ id: x.id, t: x.t })) });
-    g.push({ n: '2. Klasse: Uhrzeiten', items: [0, 30, 15, 45].flatMap((m) => [...Array(12)].map((_, h) => ({ id: `k2uhr:${h + 1}:${m}`, t: `Es ist ${uhrText(h + 1, m)}.` }))) });
+    g.push({ n: 'Uhrzeit-Bausteine (werden mit den Zahlen zusammengesetzt)', items: [['uz:esist', 'Es ist'], ['uz:uhr', 'Uhr'], ['uz:halb', 'halb'], ['uz:vnach', 'Viertel nach'], ['uz:vvor', 'Viertel vor'], ['uz:ein', 'ein (für „Es ist ein Uhr“)']].map(([id, t]) => ({ id, t })) });
     g.push({ n: 'Lesetexte (Lese-Training)', items: D.LSTUFEN.flatMap((S, k) => S.texts.map((T, i) => ({ id: leseClipId(k + 1, i), t: plain(T.t), hint: `Stufe ${k + 1}: ${T.n}` }))) });
     g.push({ n: 'Trickbuch', items: Object.entries(D.TRICKS).map(([k, T]) => ({ id: 'trick:' + k, t: T.n + '. ' + T.d })) });
     return g;
@@ -2236,7 +2249,7 @@ ${mouth}</svg>`;
   const topicOf = (id) => TOPIC_BY[id.split(':')[0]];
   function topicNews(pool) {
     const out = [];
-    TOPICS.filter((T) => T.pool === pool && T.gate()).forEach((T) => { const n = T.ids.filter((id) => box(id) === 0); out.push(...(TEST() ? shuffle(n) : n).slice(0, 2)); });
+    TOPICS.filter((T) => T.pool === pool && T.k !== 'hw' && T.gate()).forEach((T) => { const n = T.ids.filter((id) => box(id) === 0); out.push(...(TEST() ? shuffle(n) : n).slice(0, 2)); });
     return shuffle(out);
   }
   function weave(a, b, every) { const o = []; let j = 0; a.forEach((x, i) => { o.push(x); if ((i + 1) % every === 0 && j < b.length) o.push(b[j++]); }); while (j < b.length) o.push(b[j++]); return o; }
@@ -2250,6 +2263,12 @@ ${mouth}</svg>`;
     return `${T ? T.n : ''}: ${s}`;
   }
   const wortOf = (t, i) => (t === 'N' ? D.NOUNS[i].s : t === 'V' ? D.VERBS[i] : D.ADJS[i]);
+  // Uhrzeit mit Kevins Bausteinen: „Es ist“ + „halb“/„Viertel nach“/„Viertel vor“ + Zahl (+ „Uhr“)
+  function uhrVoice(h, m) {
+    const nx = (h % 12) + 1, text = `Es ist ${uhrText(h, m)}.`;
+    const ids = m === 0 ? ['uz:esist', h === 1 ? 'uz:ein' : 'num:' + h, 'uz:uhr'] : m === 30 ? ['uz:esist', 'uz:halb', 'num:' + nx] : m === 15 ? ['uz:esist', 'uz:vnach', 'num:' + h] : ['uz:esist', 'uz:vvor', 'num:' + nx];
+    return { ids, text };
+  }
   function uhrText(h, m) { const nx = (h % 12) + 1; return m === 0 ? `${h} Uhr` : m === 30 ? `halb ${nx}` : m === 15 ? `Viertel nach ${h}` : `Viertel vor ${nx}`; }
   const geldParts = (id) => id.split(':')[1].split('-').map(Number);
   function geldText(id) { const s = geldParts(id).reduce((a, b) => a + b, 0); return s >= 100 && s % 100 === 0 ? `${s / 100} Euro` : s > 100 ? `${Math.floor(s / 100)} Euro ${s % 100} Cent` : `${s} Cent`; }
@@ -2274,7 +2293,7 @@ ${mouth}</svg>`;
     const f = { kreis: '<circle cx="60" cy="60" r="48"/>', dreieck: '<polygon points="60,10 112,104 8,104"/>', quadrat: '<rect x="14" y="14" width="92" height="92"/>', rechteck: '<rect x="4" y="30" width="112" height="60"/>' }[s];
     return `<svg viewBox="0 0 120 120" class="shape"><g fill="#ffd34d" stroke="#15233f" stroke-width="5">${f}</g></svg>`;
   }
-  function plurals(N) { const s = N.s; const c = new Set([s + 'e', s + 'en', s + 'er', s + 's', s + 'n']); c.delete(N.p); c.delete(s); return shuffle([...c]).slice(0, 2); }
+  function plurals(N) { const others = shuffle(D.NOUNS.filter((x) => x !== N && x.p !== N.p)); const out = []; if (N.s !== N.p) out.push(N.s); for (const o of others) { if (out.length >= 2) break; if (!out.includes(o.p)) out.push(o.p); } return out.slice(0, 2); } // nur echte, richtig geschriebene Wörter
   Object.assign(TASKS, {
     form(t, ui) {
       const s = t.id.split(':')[1];
@@ -2303,9 +2322,9 @@ ${mouth}</svg>`;
       const [, x, y] = t.id.split(':'); const hh = +x, mm = +y; const right = uhrText(hh, mm);
       ui.prompt(D.PROMPTS4['p2:uhr'], 'p2:uhr');
       ui.stage.append(svgEl(svgClock(hh, mm), 'clock-box'), h('p', { class: 'note' }, 'Kurzer roter Zeiger: Stunde. Langer blauer Zeiger: Minuten.'));
-      const wrong = shuffle([uhrText((hh % 12) + 1, mm), uhrText(hh, (mm + 30) % 60), uhrText(hh, mm === 15 ? 45 : 15), uhrText(((hh + 10) % 12) + 1, mm)].filter((v) => v !== right)).slice(0, 2);
+      const wrong = shuffle([uhrText((hh % 12) + 1, mm), uhrText(hh, (mm + 30) % 60), uhrText(hh, mm === 15 ? 45 : 15), uhrText(((hh + 10) % 12) + 1, mm)].filter((v) => v !== right)).filter((v, i, arr) => arr.indexOf(v) === i).slice(0, 2);
       ui.choices(shuffle([right, ...wrong]).map((v) => ({ label: v, value: v })), (v) => v === right, 'words');
-      ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${right} (${hh}:${String(mm).padStart(2, '0')})`)), voice: [{ id: `k2uhr:${hh}:${mm}`, text: `Es ist ${right}.` }] });
+      ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${right} (${hh}:${String(mm).padStart(2, '0')})`)), voice: [uhrVoice(hh, mm)] });
       ui.audio((full) => (full ? [ui.promptPart] : null));
     },
     laenge(t, ui) {
@@ -2422,7 +2441,7 @@ ${mouth}</svg>`;
       ui.prompt(D.PROMPTS4['p2:gk'], 'p2:gk');
       ui.stage.append(h('p', { class: 'word-plain' }, w.toLowerCase()));
       if (!S.test) tipButton(ui, () => ({ k: 'nomen', tip: D.TRICKS.nomen.d }));
-      ui.choices([{ label: 'Groß: ' + w[0].toUpperCase() + w.slice(1), value: true }, { label: 'Klein: ' + w.toLowerCase(), value: false }], (v) => v === big, 'two');
+      ui.choices([{ label: '🔠 Groß', value: true }, { label: '🔡 Klein', value: false }], (v) => v === big, 'two');
       ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, big ? `${D.NOUNS[+x].a} ${w}` : w), h('p', { class: 'strat' }, big ? 'Namenwörter schreibt man groß.' : 'Tunwörter und Wiewörter schreibt man klein.')) });
       ui.audio((full) => (full ? [ui.promptPart] : null));
     },
@@ -2520,7 +2539,8 @@ ${mouth}</svg>`;
     if (to === cur) { L.lvl = cur; return null; }
     L.lvl = to; L.up = 0; L.down = 0; return to > cur ? 'up' : 'down';
   }
-  function showLeseTraining() {
+  function showLeseTraining(opts) {
+    opts = opts || {};
     state.lese = state.lese || { log: [] };
     const L = state.lese; const today = dayNum();
     const res = { d: dayKey(today) };
@@ -2617,7 +2637,7 @@ ${mouth}</svg>`;
         ch === 'up' ? h('p', { class: 'note lvl-up' }, `🚀 Neue Lese-Stufe ${state.lese.lvl}! Die nächsten Texte werden länger.`) : null,
         gift ? h('p', { class: 'note' }, `Geschenk für Max: ${gift.e} ${gift.n}`) : null,
         h('button', { class: 'tile', id: 'lese-mama', onclick: (e) => { res.mama = true; L.log[L.log.length - 1].mama = true; save(); e.target.textContent = 'Eingetragen ✓'; e.target.disabled = true; sendReport(`${state.name || 'Diana'}: Lesen mit Mama ✓`, 'Heute 10 Minuten zusammen mit Mama gelesen.'); } }, '👩 Mama: Wir haben heute 10 Min. zusammen gelesen'),
-        h('button', { class: 'tile go big', id: 'lese-home', onclick: () => showHome() }, 'Fertig')));
+        h('button', { class: 'tile go big', id: 'lese-home', onclick: () => (opts.then ? opts.then() : showHome()) }, opts.then ? 'Weiter: kleine Runde ▶' : 'Fertig')));
       Voice.say([P('p:fertig')]);
     }
     teppich();
@@ -2631,7 +2651,7 @@ ${mouth}</svg>`;
     if (res.lvlNew) lines.push(res.lvlNew > (res.lvl || 1) ? `⬆️ Neue Lese-Stufe: ${res.lvlNew}` : `⬇️ Lese-Stufe zurück auf ${res.lvlNew} (Text war zu schwer)`);
     if (res.partial) lines.push('(vorzeitig beendet)');
     const days = new Set(L.map((x) => x.d)).size; lines.push(`Lese-Training an ${days} Tagen`);
-    sendReport(`${state.name || 'Diana'}: Lese-Training 📖`, lines.join('\n'));
+    sendReport(`${state.name || 'Diana'}: Lese-Training 📖`, lines.join('\n'), 2);
   }
 
   // ---------- Ausprobieren: jede Aufgabenart einzeln starten ----------
