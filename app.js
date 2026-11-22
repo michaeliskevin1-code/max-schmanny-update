@@ -924,7 +924,8 @@ ${mouth}</svg>`;
   const leseToday = () => !!(state.lese && state.lese.log.some((x) => x.d === dayKey(dayNum()) && !x.partial));
   // ---------- Kevins Musik im Menü (YouTube-Player, sichtbar unten rechts, nur auf der Startseite) ----------
   const MenuMusic = (() => {
-    let player = null, ready = false, loading = false, idx = -1, want = false, ducked = false, failed = 0;
+    let player = null, ready = false, loading = false, idx = -1, want = false, ducked = false, failed = 0, bag = [];
+    const draw = () => { if (!bag.length) bag = shuffle(L().map((_, i) => i).filter((i) => i !== idx)); return bag.pop(); };
     const dock = h('div', { class: 'yt-dock', hidden: true }, h('div', { id: 'yt-frame' }),
       h('div', { class: 'yt-bar' }, h('span', { class: 'yt-t' }, '📻 Kevins Radio'), h('button', { class: 'yt-b', 'aria-label': 'Nächstes Lied', onclick: () => next() }, '⏭'), h('button', { class: 'yt-b', 'aria-label': 'Musik aus', onclick: () => { state.settings.menuMusic = false; save(); hide(); } }, '✕')));
     const L = () => D.MUSIC || [];
@@ -933,7 +934,7 @@ ${mouth}</svg>`;
       if (loading || VIEWER || !L().length) return; loading = true;
       document.body.append(dock);
       window.onYouTubeIframeAPIReady = () => {
-        idx = rnd(L().length);
+        idx = draw();
         player = new YT.Player('yt-frame', { width: 200, height: 200, videoId: L()[idx].yt,
           playerVars: { playsinline: 1, controls: 0, rel: 0, modestbranding: 1, origin: location.origin, widget_referrer: 'https://michaeliskevin1-code.github.io/' },
           events: {
@@ -945,7 +946,7 @@ ${mouth}</svg>`;
       const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); }; document.head.append(sc);
     }
     function title() { const t = dock.querySelector('.yt-t'); if (t && L()[idx]) t.textContent = '📻 ' + L()[idx].t; }
-    function next() { if (!ready) return; idx = (idx + 1 + rnd(Math.max(1, L().length - 1))) % L().length; player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
+    function next() { if (!ready) return; idx = draw(); player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
     function show() { if (!state.settings.menuMusic || VIEWER) return; want = true; load(); dock.hidden = false; if (ready) { player.setVolume(vol()); player.playVideo(); } }
     function hide() { want = false; dock.hidden = true; if (ready) player.pauseVideo(); }
     function duck(on) { ducked = on; if (ready && want) player.setVolume(vol()); }
