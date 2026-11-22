@@ -1000,7 +1000,8 @@ ${mouth}</svg>`;
         h('button', { class: 'world ice', id: 'go-math', onclick: go('math', 'p:eisbahn') }, h('span', { class: 'w-ico' }, '⛸️'), h('span', { class: 'w-name' }, 'Eisbahn'), h('span', { class: 'w-sub' }, 'Rechnen'), h('span', { class: 'w-demo' }, '13 − 5')),
         h('button', { class: 'world pool', id: 'go-read', onclick: go('read', 'p:schwimmbad') }, h('span', { class: 'w-ico' }, '🏊'), h('span', { class: 'w-name' }, 'Schwimmbad'), h('span', { class: 'w-sub' }, 'Lesen'), h('span', { class: 'w-demo' }, h('span', { class: 'sy s0' }, 'Le'), h('span', { class: 'sy s1' }, 'sen'))),
         h('button', { class: 'world ru', id: 'go-ru', onclick: go('ru', 'p:russisch') }, h('span', { class: 'w-ico' }, '🗣️'), h('span', { class: 'w-name' }, 'Russisch'), h('span', { class: 'w-sub' }, 'Reden & Verstehen'), h('span', { class: 'w-demo' }, 'Привет!')))
-      : h('div', { class: 'sleep-card' }, h('p', { class: 'h-display' }, 'Max schläft. Morgen geht’s weiter!'), h('p', { class: 'note' }, 'Tanz-Idee für jetzt:'), textEl(pick(D.DANCES), { cls: 'small' }));
+      : h('div', { class: 'sleep-card' }, h('p', { class: 'h-display' }, 'Max schläft. Morgen geht’s weiter!'),
+        leseToday() ? null : h('button', { class: 'world lese', id: 'go-lese', onclick: () => { SFX.tap(); explain('lese', showLeseTraining); } }, h('span', { class: 'w-ico' }, '📖'), h('span', { class: 'w-name' }, 'Lese-Training geht noch!'), h('span', { class: 'w-sub' }, '5 Minuten')), h('p', { class: 'note' }, 'Tanz-Idee für jetzt:'), textEl(pick(D.DANCES), { cls: 'small' }));
     const scr = h('main', { class: 'screen home' },
       h('header', { class: 'home-head' }, h('h1', { class: 'hello' }, `Hallo, ${state.name}!`), TEST() ? h('p', { class: 'test-chip' }, '🧪 Test-Modus: alles frei') : null, dayStrip()),
       h('div', { class: 'scene' }, catEl, maxEl, pabloEl),
@@ -1050,7 +1051,9 @@ ${mouth}</svg>`;
         const first = !S.seenKind[t.kind]; S.seenKind[t.kind] = 1;
         setTimeout(() => {
           if (!document.body.contains(scr)) return;
-          let parts = fn(first || autoAll || poolOf(t.id) === 'ru') || [];
+          const isRu = poolOf(t.id) === 'ru'; const ruKey = dayKey(dayNum()); state.ruSaid = state.ruSaid || {};
+          const ruFirst = isRu && state.ruSaid[t.kind] !== ruKey; if (ruFirst) { state.ruSaid[t.kind] = ruKey; save(); }
+          let parts = fn(isRu ? ruFirst : (first || autoAll)) || [];
           if (S && S.intro) { parts = [S.test ? P(S.intro) : varied(D.STARTS, 's', P(S.intro))].concat(parts); S.intro = null; }
           if (parts.length) Voice.say(parts);
         }, 350);
@@ -2199,7 +2202,7 @@ ${mouth}</svg>`;
     g.push({ n: 'Einführung (Kevin erklärt die App)', prio: true, items: (D.TOUR || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: 'Begrüßungen beim Öffnen', items: (D.GREETS || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: 'Kurze Starts bei Übungen', items: (D.STARTS || []).map((x) => ({ id: x.id, t: x.t })) });
-    g.push({ n: 'Uhrzeit-Bausteine (werden mit den Zahlen zusammengesetzt)', items: [['uz:esist', 'Es ist'], ['uz:uhr', 'Uhr'], ['uz:halb', 'halb'], ['uz:vnach', 'Viertel nach'], ['uz:vvor', 'Viertel vor'], ['uz:ein', 'ein (für „Es ist ein Uhr“)']].map(([id, t]) => ({ id, t })) });
+    g.push({ n: 'Uhrzeit-Bausteine (werden mit den Zahlen zusammengesetzt)', items: [['uz:esist', 'Es ist'], ['uz:uhr', 'Uhr'], ['uz:halb', 'halb'], ['uz:vnach', 'Viertel nach'], ['uz:vvor', 'Viertel vor'], ['uz:einuhr', 'Es ist ein Uhr.']].map(([id, t]) => ({ id, t })) });
     g.push({ n: 'Lesetexte (Lese-Training)', items: D.LSTUFEN.flatMap((S, k) => S.texts.map((T, i) => ({ id: leseClipId(k + 1, i), t: plain(T.t), hint: `Stufe ${k + 1}: ${T.n}` }))) });
     g.push({ n: 'Trickbuch', items: Object.entries(D.TRICKS).map(([k, T]) => ({ id: 'trick:' + k, t: T.n + '. ' + T.d })) });
     return g;
@@ -2266,7 +2269,7 @@ ${mouth}</svg>`;
   // Uhrzeit mit Kevins Bausteinen: „Es ist“ + „halb“/„Viertel nach“/„Viertel vor“ + Zahl (+ „Uhr“)
   function uhrVoice(h, m) {
     const nx = (h % 12) + 1, text = `Es ist ${uhrText(h, m)}.`;
-    const ids = m === 0 ? ['uz:esist', h === 1 ? 'uz:ein' : 'num:' + h, 'uz:uhr'] : m === 30 ? ['uz:esist', 'uz:halb', 'num:' + nx] : m === 15 ? ['uz:esist', 'uz:vnach', 'num:' + h] : ['uz:esist', 'uz:vvor', 'num:' + nx];
+    const ids = m === 0 ? (h === 1 ? ['uz:einuhr'] : ['uz:esist', 'num:' + h, 'uz:uhr']) : m === 30 ? ['uz:esist', 'uz:halb', 'num:' + nx] : m === 15 ? ['uz:esist', 'uz:vnach', 'num:' + h] : ['uz:esist', 'uz:vvor', 'num:' + nx];
     return { ids, text };
   }
   function uhrText(h, m) { const nx = (h % 12) + 1; return m === 0 ? `${h} Uhr` : m === 30 ? `halb ${nx}` : m === 15 ? `Viertel nach ${h}` : `Viertel vor ${nx}`; }
