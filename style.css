@@ -571,3 +571,11 @@ button { font: inherit; color: inherit; }
 .lese-result { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .flash.gone { visibility: hidden; }
 .lese-peek summary { cursor: pointer; color: #5b6b7f; }
+.tour { position: fixed; inset: 0; z-index: 9999; cursor: pointer; }
+.tour-hole { position: fixed; border-radius: 18px; box-shadow: 0 0 0 9999px rgba(10, 20, 40, .78); transition: all .3s ease; pointer-events: none; outline: 4px solid #ffd34d; }
+.tour.center { background: rgba(10, 20, 40, .82); }
+.tour-bubble { position: fixed; left: 50%; transform: translateX(-50%); width: min(560px, 90vw); background: #fff; border-radius: 20px; padding: 18px 20px 14px; box-shadow: 0 10px 30px rgba(0,0,0,.3); font-size: clamp(19px, 3.6vw, 24px); line-height: 1.4; }
+.tour.center .tour-bubble { top: 50%; transform: translate(-50%, -50%); }
+.tour-bubble p { margin: 0 0 8px; }
+.tour-tap { color: #c47a00; font-weight: 700; font-size: .8em; }
+.tour-count { position: absolute; right: 14px; bottom: 10px; font-size: 13px; color: #8a96a5; }

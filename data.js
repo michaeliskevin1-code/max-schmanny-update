@@ -594,3 +594,18 @@ window.APPDATA = (function () {
   Object.assign(window.APPDATA, { HFW, LTEXTS });
   window.APPDATA.PROMPTS4['p2:hw'] = 'Blitzwort! Welches Wort war das?';
 })();
+
+// ---------- Einführung (Kevin erklärt die App) ----------
+window.APPDATA.TOUR = [
+  { id: 'tour:0', sel: null, t: 'Hallo Diana! Hier ist Kevin. Deine App hat ein Update bekommen. Ich zeige dir kurz, was es alles gibt.' },
+  { id: 'tour:1', sel: null, t: 'Mit dieser App wirst du jeden Tag ein bisschen besser im Lesen und Rechnen. Dann wird die Schule viel leichter.' },
+  { id: 'tour:2', sel: '#go-lese', t: 'Das ist das Lese-Training. Mach es jeden Tag, das dauert nur fünf Minuten. Das ist das Wichtigste.' },
+  { id: 'tour:3', sel: '#go-math', t: 'Auf der Eisbahn rechnest du.' },
+  { id: 'tour:4', sel: '#go-read', t: 'Im Schwimmbad liest und schreibst du.' },
+  { id: 'tour:5', sel: '#go-ru', t: 'Hier übst du Russisch sprechen und verstehen.' },
+  { id: 'tour:6', sel: '#go-mix', t: 'Hier kommt alles gemischt.' },
+  { id: 'tour:7', sel: '.days', t: 'Hier siehst du, an welchen Tagen du geübt hast. Jeder Tag bekommt eine Pfote.' },
+  { id: 'tour:8', sel: '.scene', t: 'Tipp Max, Schmanny und Pablo an. Die haben dir was zu sagen.' },
+  { id: 'tour:9', sel: 'nav.minor', t: 'Hier unten findest du die Geschichte, Sachen zum Anziehen für Max, deinen Weg, Post von mir, deine Tänze und das Trickbuch.' },
+  { id: 'tour:10', sel: null, t: 'Wenn eine Aufgabe zu schwer ist, tipp auf die Glühbirne. Dann bekommst du einen Tipp. Und jetzt los, fang mit dem Lese-Training an!' }
+];

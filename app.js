@@ -728,6 +728,40 @@ ${mouth}</svg>`;
     let pool = ids.filter((k) => k !== tapLast[who]); if (!pool.length) pool = ids;
     const id = pick(pool); tapLast[who] = id; Voice.say([{ id, text: '' }]);
   }
+  // ---------- Einführung: Rest wird dunkel, ein Bereich wird erklärt, Tippen = weiter ----------
+  const TOUR_VERSION = 1;
+  function showTour(force) {
+    const steps = D.TOUR || []; if (!steps.length) return;
+    let i = 0; const ov = h('div', { class: 'tour', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Einführung' });
+    const hole = h('div', { class: 'tour-hole' }); const bubble = h('div', { class: 'tour-bubble' });
+    ov.append(hole, bubble); document.body.append(ov);
+    function place() {
+      const st = steps[i]; const el = st.sel ? document.querySelector(st.sel) : null;
+      bubble.replaceChildren(h('p', null, st.t), h('p', { class: 'tour-tap' }, i < steps.length - 1 ? '👆 Tippe irgendwo, wenn du es verstanden hast' : '👆 Tippe, um loszulegen'), h('span', { class: 'tour-count' }, `${i + 1} / ${steps.length}`));
+      if (el) {
+        el.scrollIntoView({ block: 'center' });
+        setTimeout(() => {
+          const r = el.getBoundingClientRect(); const pad = 8;
+          Object.assign(hole.style, { display: 'block', left: (r.left - pad) + 'px', top: (r.top - pad) + 'px', width: (r.width + 2 * pad) + 'px', height: (r.height + 2 * pad) + 'px' });
+          ov.classList.remove('center');
+          const below = r.bottom + 220 < window.innerHeight; bubble.style.top = below ? (r.bottom + 18) + 'px' : Math.max(12, r.top - 18 - bubble.offsetHeight) + 'px';
+        }, 250);
+      } else { hole.style.display = 'none'; ov.classList.add('center'); bubble.style.top = ''; }
+      Voice.say([{ id: st.id, text: st.t }]);
+    }
+    let lock = false;
+    ov.addEventListener('click', () => {
+      if (lock) return; lock = true; setTimeout(() => { lock = false; }, 600); SFX.tap();
+      i++; if (i >= steps.length) { Voice.stop(); ov.remove(); state.tourSeen = TOUR_VERSION; save(); window.scrollTo(0, 0); return; }
+      place();
+    });
+    place();
+  }
+  function maybeTour() {
+    if ((state.tourSeen || 0) >= TOUR_VERSION || !state.name) return;
+    if (!(D.TOUR || []).every((x) => Voice.has(x.id))) return; // startet erst, wenn Kevins Aufnahmen da sind
+    setTimeout(() => { if (onHome && !document.querySelector('.tour, .overlay')) showTour(); }, 900);
+  }
   const leseToday = () => !!(state.lese && state.lese.log.some((x) => x.d === dayKey(dayNum()) && !x.partial));
   function showHome(greet) {
     if (practiceDays() > 0 || state.sessions > 0 || TEST()) ensureMission();
@@ -764,7 +798,7 @@ ${mouth}</svg>`;
         h('button', { class: 'mini', id: 'go-tricks2', onclick: () => { SFX.tap(); showTricks(); } }, h('span', { class: 'm-ico' }, '💡'), 'Trickbuch')),
       h('footer', { class: 'home-foot' }, storageOK ? null : h('p', { class: 'err' }, 'Achtung: Dieser Browser speichert gerade nichts. Fortschritt geht beim Schließen verloren.'), holdButton(parentGate))
     );
-    mount(scr, 'home'); onHome = true;
+    mount(scr, 'home'); onHome = true; maybeTour();
     if (greet) setTimeout(() => Voice.say(can ? [P('p:hallo'), P('p:wohin')] : [P('p:muede')]), 250);
   }
 
@@ -1877,6 +1911,7 @@ ${mouth}</svg>`;
     g.push({ n: 'Startbildschirm: Antippen', items: [['cat', 'Schmanny'], ['max', 'Max'], ['pablo', 'Pablo']].flatMap(([w, n]) => [...Array(TAPS[w])].map((_, k) => ({ id: `tap:${w}:${k}`, t: `${n} antippen ${k + 1}`, hint: 'frei, lustig' }))) });
     g.push({ n: 'Zahlen 0 und 11–100, „ist“', items: [{ id: 'num:0', t: 'null' }].concat([...Array(90)].map((_, k) => ({ id: 'num:' + (k + 11), t: numWord(k + 11) })), [{ id: 'ist', t: 'ist' }]) });
     g.push({ n: 'Neu: Anleitungen 2. Klasse', items: Object.entries(D.PROMPTS4).map(([id, t]) => ({ id, t })) });
+    g.push({ n: 'Einführung (Kevin erklärt die App)', prio: true, items: (D.TOUR || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: '2. Klasse: Uhrzeiten', items: [0, 30, 15, 45].flatMap((m) => [...Array(12)].map((_, h) => ({ id: `k2uhr:${h + 1}:${m}`, t: `Es ist ${uhrText(h + 1, m)}.` }))) });
     g.push({ n: 'Trickbuch', items: Object.entries(D.TRICKS).map(([k, T]) => ({ id: 'trick:' + k, t: T.n + '. ' + T.d })) });
     return g;
@@ -2359,6 +2394,7 @@ ${mouth}</svg>`;
       h('section', { class: 'p-card' }, h('h2', null, 'Mehr zum Ausprobieren'),
         h('div', { class: 'try-grid' },
           h('button', { class: 'p-btn try-b', id: 'try-test', onclick: () => { if (!on) { state.settings.testAll = true; save(); } startTest(); } }, '🏅 Test starten'),
+          h('button', { class: 'p-btn try-b', id: 'try-tour', onclick: () => { showHome(); setTimeout(() => showTour(true), 400); } }, '👋 Einführung zeigen'),
           h('button', { class: 'p-btn try-b', id: 'try-lese', onclick: () => showLeseTraining() }, '📖 Lese-Training'),
           h('button', { class: 'p-btn try-b', id: 'try-dance', onclick: () => { S = null; showDance(); } }, '💃 Tanz-Pause'),
           h('button', { class: 'p-btn try-b', onclick: () => showStoryList() }, '📖 Geschichte'),
@@ -2607,7 +2643,7 @@ ${mouth}</svg>`;
   // ---------- Start ----------
   window.__maxApp = {
     get state() { return state; }, setState(s) { state = Object.assign(defaults(), s); save(); }, skillStars, stageUnlocked, skillUnlocked, MSK, newRead, newMath, buildSession, graphemes,
-    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS,
+    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour,
     debugTask(id, kind) { startSession(poolOf(id)); S.queue = []; S.N = 99; renderTask({ id, kind, isNew: false, retry: false }); }
   };
   showSplash();
