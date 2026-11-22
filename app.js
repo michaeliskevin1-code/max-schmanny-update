@@ -3360,6 +3360,19 @@ ${mouth}</svg>`;
     try { AppP && AppP.addListener('backButton', () => { const ovs = document.querySelectorAll('.overlay'); if (ovs.length) { ovs.forEach((o) => o.remove()); Voice.stop(); if (!onHome) showHome(); return; } if (onHome || !state.name) { try { AppP.minimizeApp(); } catch (e) { } } else showHome(); }); } catch (e) { }
   }
 
+  // Einmalig (Kevins Wunsch 22.11.): Mathe bis 20 gilt als gekonnt → Start bei Zahlen 20–100. Nur Mathe, Rest bleibt.
+  (function mathTo100() {
+    if (VIEWER) return; state.migr = state.migr || {}; if (state.migr.math100) return;
+    const today = dayNum(); let n = 0;
+    ['p10', 'm10', 'p20o', 'm20o', 'p20m', 'm20m'].forEach((k) => {
+      const sk = MSK.find((x) => x.k === k); if (!sk) return;
+      sk.ids.forEach((id, i) => { if (box(id) < 3) { const it = getItem(id); it.b = 3; it.d = today + 3 + (i % 12); n++; } });
+      state.checks[k] = Object.assign(state.checks[k] || {}, { done: true });
+    });
+    state.migr.math100 = Date.now(); save();
+    if (n) setTimeout(() => sendReport('Mathe umgestellt 🧮', 'Alles bis 20 gilt jetzt als gekonnt (wird nur noch ab und zu wiederholt). Neue Aufgaben ab Zehner-Zahlen, dann Plus/Minus bis 100.', 2), 5000);
+  })();
+
   // ---------- Start ----------
   window.__maxApp = {
     get state() { return state; }, setState(s) { state = Object.assign(defaults(), s); save(); }, skillStars, stageUnlocked, skillUnlocked, MSK, newRead, newMath, buildSession, graphemes,
