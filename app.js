@@ -728,6 +728,12 @@ ${mouth}</svg>`;
     let pool = ids.filter((k) => k !== tapLast[who]); if (!pool.length) pool = ids;
     const id = pick(pool); tapLast[who] = id; Voice.say([{ id, text: '' }]);
   }
+  // Abwechslung: zufälliger aufgenommener Clip, nie derselbe wie beim letzten Mal; sonst der alte Standard-Clip
+  function varied(list, key, fallback) {
+    const have = (list || []).filter((x) => Voice.has(x.id)); if (!have.length) return fallback;
+    state.lastVar = state.lastVar || {}; const pool = have.filter((x) => x.id !== state.lastVar[key]);
+    const x = pick(pool.length ? pool : have); state.lastVar[key] = x.id; save(); return { id: x.id, text: x.t };
+  }
   // ---------- Einführung: Rest wird dunkel, ein Bereich wird erklärt, Tippen = weiter ----------
   const TOUR_VERSION = 1;
   function showTour(force) {
@@ -799,7 +805,7 @@ ${mouth}</svg>`;
       h('footer', { class: 'home-foot' }, storageOK ? null : h('p', { class: 'err' }, 'Achtung: Dieser Browser speichert gerade nichts. Fortschritt geht beim Schließen verloren.'), holdButton(parentGate))
     );
     mount(scr, 'home'); onHome = true; maybeTour();
-    if (greet) setTimeout(() => Voice.say(can ? [P('p:hallo'), P('p:wohin')] : [P('p:muede')]), 250);
+    if (greet) setTimeout(() => Voice.say(can ? [varied(D.GREETS, 'g', P('p:hallo')), P('p:wohin')] : [P('p:muede')]), 250);
   }
 
   // ---------- Aufgaben ----------
@@ -830,7 +836,7 @@ ${mouth}</svg>`;
         setTimeout(() => {
           if (!document.body.contains(scr)) return;
           let parts = fn(first || autoAll) || [];
-          if (S && S.intro) { parts = [P(S.intro)].concat(parts); S.intro = null; }
+          if (S && S.intro) { parts = [S.test ? P(S.intro) : varied(D.STARTS, 's', P(S.intro))].concat(parts); S.intro = null; }
           if (parts.length) Voice.say(parts);
         }, 350);
       },
@@ -1912,6 +1918,8 @@ ${mouth}</svg>`;
     g.push({ n: 'Zahlen 0 und 11–100, „ist“', items: [{ id: 'num:0', t: 'null' }].concat([...Array(90)].map((_, k) => ({ id: 'num:' + (k + 11), t: numWord(k + 11) })), [{ id: 'ist', t: 'ist' }]) });
     g.push({ n: 'Neu: Anleitungen 2. Klasse', items: Object.entries(D.PROMPTS4).map(([id, t]) => ({ id, t })) });
     g.push({ n: 'Einführung (Kevin erklärt die App)', prio: true, items: (D.TOUR || []).map((x) => ({ id: x.id, t: x.t })) });
+    g.push({ n: 'Begrüßungen beim Öffnen', items: (D.GREETS || []).map((x) => ({ id: x.id, t: x.t })) });
+    g.push({ n: 'Kurze Starts bei Übungen', items: (D.STARTS || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: '2. Klasse: Uhrzeiten', items: [0, 30, 15, 45].flatMap((m) => [...Array(12)].map((_, h) => ({ id: `k2uhr:${h + 1}:${m}`, t: `Es ist ${uhrText(h + 1, m)}.` }))) });
     g.push({ n: 'Trickbuch', items: Object.entries(D.TRICKS).map(([k, T]) => ({ id: 'trick:' + k, t: T.n + '. ' + T.d })) });
     return g;

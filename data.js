@@ -609,3 +609,12 @@ window.APPDATA.TOUR = [
   { id: 'tour:9', sel: 'nav.minor', t: 'Hier unten findest du die Geschichte, Sachen zum Anziehen für Max, deinen Weg, Post von mir, deine Tänze und das Trickbuch.' },
   { id: 'tour:10', sel: null, t: 'Wenn eine Aufgabe zu schwer ist, tipp auf die Glühbirne. Dann bekommst du einen Tipp. Und jetzt los, fang mit dem Lese-Training an!' }
 ];
+
+// ---------- Abwechslung: Begrüßungen beim Öffnen, kurze Starts bei Übungen ----------
+window.APPDATA.GREETS = [
+  'Hey Diana! Schön, dass du da bist!', 'Da ist ja meine Lieblingsschwester!', 'Hallo Diana! Max hat schon auf dich gewartet.', 'Na, bereit für heute?',
+  'Diana ist da! Pablo freut sich schon.', 'Hi Diana! Heute wird ein guter Tag.', 'Huhu! Schmanny ist sogar wach geworden für dich.', 'Hallo Rechen-Star! Was machen wir heute?'
+].map((t, i) => ({ id: 'gruss:' + (i + 1), t }));
+window.APPDATA.STARTS = [
+  'Okay Diana, let’s go!', 'Los geht’s!', 'Auf geht’s!', 'Bereit? Los!', 'Na dann, zeig mal, was du kannst!', 'Und los!', 'Let’s go, Diana!', 'Okay, ab geht die Post!'
+].map((t, i) => ({ id: 'start:' + (i + 1), t }));
