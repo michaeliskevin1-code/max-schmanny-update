@@ -1018,6 +1018,7 @@ ${mouth}</svg>`;
         h('button', { class: 'mini', id: 'go-map', onclick: () => { SFX.tap(); explain('map', () => showMap()); } }, h('span', { class: 'm-ico' }, '⭐'), 'Mein Weg'),
         h('button', { class: 'mini', id: 'go-post', onclick: () => { SFX.tap(); explain('post', () => showPosts()); } }, h('span', { class: 'm-ico' }, '📮'), 'Post', unreadPost() ? h('span', { class: 'badge' }, 'Neu!') : null),
         h('button', { class: 'mini', id: 'go-studio', onclick: () => { SFX.tap(); explain('malen', () => showStudio()); } }, h('span', { class: 'm-ico' }, '🎨'), 'Malen'),
+        h('button', { class: 'mini', id: 'go-foto', onclick: () => { SFX.tap(); explain('foto', () => showFotoList()); } }, h('span', { class: 'm-ico' }, '📸'), 'Foto-Rätsel'),
         h('button', { class: 'mini', id: 'go-dances', onclick: () => { SFX.tap(); explain('dances', () => showDances()); } }, h('span', { class: 'm-ico' }, '💃'), 'Meine Tänze'),
         h('button', { class: 'mini', id: 'go-help', onclick: () => { SFX.tap(); showHelp(); } }, h('span', { class: 'm-ico' }, '❓'), 'Was ist was?'),
         h('button', { class: 'mini', id: 'go-tricks2', onclick: () => { SFX.tap(); explain('tricks', () => showTricks()); } }, h('span', { class: 'm-ico' }, '💡'), 'Trickbuch')),
@@ -2818,6 +2819,7 @@ ${mouth}</svg>`;
         h('input', { id: 'set-runame', type: 'text', value: state.ruName || translit(state.name), maxlength: '20', onchange: (e) => { state.ruName = e.target.value.trim(); save(); } }),
         h('button', { class: 'tile', onclick: () => { Voice.say([{ text: `Привет! Меня зовут ${ruName()}.`, lang: 'ru' }]); setTimeout(() => { ruMsg.textContent = Voice.hasRu() ? 'Russische Gerätestimme gefunden ✓' : 'Auf diesem Gerät ist keine russische Gerätestimme da. Nimm die Russisch-Clips auf, oder installier in den Android-Einstellungen unter „Sprachausgabe“ das Sprachpaket Russisch.'; }, 600); } }, 'Russische Stimme testen'),
         ruMsg),
+      fotoParentCard(),
       h('section', { class: 'p-card' }, h('h2', null, 'Ton'),
         toggle('tts', 'Gerätestimme liest vor, solange noch keine eigene Aufnahme da ist'),
         toggle('sfx', 'Klick- und Jubel-Töne'),
@@ -3180,6 +3182,89 @@ ${mouth}</svg>`;
     mount(scr, 'home');
   }
 
+  // ---------- Foto-Rätsel: verschwommenes Foto, jede richtig eingetippte Rechnung macht es schärfer ----------
+  // Eigene Fotos (Familie) liegen nur auf dem Gerät in IndexedDB – nie im Spielstand, nie bei ntfy, nie im Update-Repo.
+  const FotoDB = (() => {
+    let dbp = null;
+    const open = () => dbp || (dbp = new Promise((res, rej) => { try { const r = indexedDB.open('max-fotos', 1); r.onupgradeneeded = () => r.result.createObjectStore('f', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }));
+    const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction('f', mode); const st = t.objectStore('f'); const out = fn(st); t.oncomplete = () => res(out && out.result !== undefined ? out.result : out); t.onerror = () => rej(t.error); }); };
+    return {
+      async all() { try { const db = await open(); return await new Promise((res) => { const r = db.transaction('f', 'readonly').objectStore('f').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => res([]); }); } catch (e) { return []; } },
+      async add(rec) { try { await tx('readwrite', (st) => st.put(rec)); return true; } catch (e) { return false; } },
+      async del(id) { try { await tx('readwrite', (st) => st.delete(id)); } catch (e) { } }
+    };
+  })();
+  function shrinkImage(file, max) {
+    return new Promise((res) => { const url = URL.createObjectURL(file); const im = new Image(); im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.8)); }; im.onerror = () => res(null); im.src = url; });
+  }
+  async function fotoPool() {
+    const own = (await FotoDB.all()).map((f) => ({ id: f.id, t: f.t || 'Ein Foto von zu Hause!', src: f.src, own: true }));
+    return own.concat(D.PHOTOS || []);
+  }
+  function miniPad(onSubmit) {
+    let v = ''; const disp = h('span', { class: 'fr-in' }, '?');
+    const set = () => { disp.textContent = v || '?'; disp.classList.toggle('filled', !!v); };
+    const grid = h('div', { class: 'np fr-np' }, [1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, '✓'].map((k) => h('button', { class: 'tile np-k' + (k === '✓' ? ' go' : '') + (k === '⌫' ? ' del' : ''), 'aria-label': k === '⌫' ? 'Löschen' : k === '✓' ? 'Fertig' : String(k), onclick: () => { SFX.tap(); if (k === '⌫') v = v.slice(0, -1); else if (k === '✓') { if (v) { onSubmit(parseInt(v, 10)); v = ''; } } else if (v.length < 3) v += k; set(); } }, String(k))));
+    return { disp, grid };
+  }
+  async function showFotoList() {
+    const pool = await fotoPool(); const done = (state.fotos && state.fotos.done) || {};
+    const next = pool.find((p) => !done[p.id]) || pick(pool);
+    const scr = h('main', { class: 'screen map studio' },
+      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, '📸 Foto-Rätsel')),
+      h('p', { class: 'note' }, 'Das Foto ist ganz verschwommen. Rechne die Aufgaben: Mit jeder richtigen Antwort wird es schärfer. Was ist auf dem Bild?'),
+      next ? h('button', { class: 'tile go big', id: 'fr-next', onclick: () => { SFX.tap(); showFoto(next); } }, '▶ Neues Rätsel') : null,
+      h('div', { class: 'fr-list' }, pool.map((p) => h('button', { class: 'fr-card', onclick: () => { SFX.tap(); showFoto(p); } }, h('img', { src: p.src, alt: 'Foto', style: done[p.id] ? '' : 'filter: blur(10px) saturate(.6)' }), h('span', null, done[p.id] ? '✓ gelöst' : '❓')))));
+    mount(scr, 'home');
+  }
+  function showFoto(P) {
+    const { PM, idx, sk } = mzLevel();
+    let pool = sk.ids.slice(); if (idx > 0) pool = pool.concat(PM[idx - 1].ids);
+    const N = 8; const tasks = shuffle(pool).slice(0, N); while (tasks.length < N) tasks.push(pick(pool));
+    let k = 0, firstTry = 0, missed = false;
+    const img = h('img', { class: 'fr-img', src: P.src, alt: 'Verschwommenes Foto' });
+    const blurOf = () => (k >= N ? 0 : Math.round(26 * (1 - k / N) + 3));
+    const setBlur = () => { img.style.filter = `blur(${blurOf()}px)`; };
+    const dots = h('div', { class: 'fr-dots' }, tasks.map(() => h('span', { class: 'fr-dot' })));
+    const q = h('p', { class: 'fr-q' }); const info = h('p', { class: 'note fr-info' }, 'Tipp das Ergebnis ein und drück ✓');
+    const pad = miniPad(submit);
+    function showTask() { const I = mathInfo(tasks[k]); q.replaceChildren(`${I.a} ${I.op} ${I.b} = `, pad.disp); missed = false; }
+    function submit(v) {
+      const I = mathInfo(tasks[k]);
+      if (v === I.c) {
+        SFX.ok(); if (!missed) firstTry++; grade(tasks[k], !missed);
+        dots.children[k].classList.add('ok'); k++; setBlur();
+        if (k >= N) return finish();
+        info.textContent = pick(['Richtig! Es wird schärfer …', 'Super! Erkennst du schon was?', 'Ja! Noch ein bisschen …', 'Genau! Weiter so!']); showTask();
+      } else {
+        SFX.oops(); if (!missed) grade(tasks[k], false); missed = true;
+        q.classList.remove('shake'); void q.offsetWidth; q.classList.add('shake');
+        info.textContent = `${v} stimmt nicht. Rechne nochmal!`;
+      }
+    }
+    function finish() {
+      state.fotos = state.fotos || { done: {} }; state.fotos.done[P.id] = 1; save();
+      SFX.fanfare(); img.classList.add('fr-clear');
+      q.replaceChildren('🎉 ', P.t); info.textContent = `${firstTry} von ${N} beim ersten Mal richtig!`;
+      pad.grid.replaceWith(h('div', { class: 'fr-end' }, h('button', { class: 'tile go big', onclick: () => showFotoList() }, 'Noch ein Rätsel'), h('button', { class: 'tile', onclick: () => showHome() }, 'Fertig')));
+      sendReport(`${state.name || 'Diana'}: Foto-Rätsel 📸`, `Foto gelöst („${P.own ? 'eigenes Foto' : P.id}“). ${firstTry} von ${N} Rechnungen beim ersten Mal richtig. Aufgaben: ${sk.n}.`, 2);
+    }
+    const scr = h('main', { class: 'screen map studio' },
+      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showFotoList()), h('h1', { class: 'h-display' }, '📸 Foto-Rätsel')),
+      h('div', { class: 'fr-wrap' }, h('div', { class: 'fr-frame' }, img), h('div', { class: 'fr-side' }, dots, q, info, pad.grid)));
+    mount(scr, 'home'); setBlur(); showTask();
+  }
+  // Eltern-Bereich: eigene Fotos hinzufügen (bleiben nur auf diesem Gerät)
+  function fotoParentCard() {
+    const list = h('div', { class: 'fr-own' }); const msg = h('p', { class: 'note', 'aria-live': 'polite' });
+    async function refresh() { const all = await FotoDB.all(); list.replaceChildren(...all.map((f) => h('div', { class: 'fr-own-item' }, h('img', { src: f.src, alt: 'Foto' }), h('button', { class: 'p-btn', 'aria-label': 'Foto löschen', onclick: async () => { await FotoDB.del(f.id); refresh(); } }, '🗑')))); if (!all.length) list.append(h('p', { class: 'note' }, 'Noch keine eigenen Fotos.')); }
+    const input = h('input', { type: 'file', accept: 'image/*', multiple: true, id: 'fr-file', style: 'display:none', onchange: async (e) => { let n = 0; for (const file of [...e.target.files].slice(0, 20)) { const src = await shrinkImage(file, 900); if (src && await FotoDB.add({ id: 'own-' + Date.now() + '-' + n, src, t: 'Ein Foto von zu Hause!' })) n++; } msg.textContent = n ? `${n} ${n === 1 ? 'Foto' : 'Fotos'} hinzugefügt ✓` : 'Das hat nicht geklappt.'; e.target.value = ''; refresh(); } });
+    refresh();
+    return h('section', { class: 'p-card' }, h('h2', null, '📸 Eigene Fotos fürs Foto-Rätsel'),
+      h('p', { class: 'note' }, 'Familienfotos hier hinzufügen. Sie bleiben nur auf diesem Gerät: Sie werden nicht verschickt, nicht an Kevin gemeldet und sind nicht in der Sicherung.'),
+      input, h('button', { class: 'tile', onclick: () => input.click() }, '➕ Fotos aus der Galerie hinzufügen'), msg, list);
+  }
+
   // Android: Zurück-Taste führt zum Startbildschirm statt die App zu schließen
   if (NATIVE) {
     const AppP = plug('App');
@@ -3189,7 +3274,7 @@ ${mouth}</svg>`;
   // ---------- Start ----------
   window.__maxApp = {
     get state() { return state; }, setState(s) { state = Object.assign(defaults(), s); save(); }, skillStars, stageUnlocked, skillUnlocked, MSK, newRead, newMath, buildSession, graphemes,
-    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, showStudio, showMzList, showGallery, mzLevel, fullStatusText, explain, pushSnapshot, svgMax, svgCat,
+    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, showFotoList, showFoto, FotoDB, showParents, showStudio, showMzList, showGallery, mzLevel, fullStatusText, explain, pushSnapshot, svgMax, svgCat,
     debugTask(id, kind) { startSession(poolOf(id)); S.queue = []; S.N = 99; renderTask({ id, kind, isNew: false, retry: false }); }
   };
   if (VIEWER) { const bar = h('div', { class: 'viewer-bar' }); document.body.prepend(bar); viewerLoad(bar); } else showSplash();
