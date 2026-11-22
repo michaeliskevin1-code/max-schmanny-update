@@ -616,8 +616,9 @@ ${mouth}</svg>`;
     sendReport(title, lines.join('\n'));
   }
   function sendReport(title, msg) {
-    if (state.settings.report === false) return;
+    if (VIEWER || state.settings.report === false) return;
     state.outbox = (state.outbox || []).concat([{ title, msg, at: Date.now() }]).slice(-20); save(); flushReports();
+    setTimeout(() => pushSnapshot(false), 1500);
   }
   // Wo ist sie gerade? (für Kevin)
   const WHERE = [['task ice', 'Eisbahn (Rechnen)'], ['task pool', 'Schwimmbad (Lesen)'], ['task ru', 'Russisch'], ['task', 'Aufgabe'], ['lese', 'Lese-Training'], ['album', 'Anziehen'], ['dance', 'Tanz-Pause'], ['home', 'Startseite'], ['story', 'Geschichte'], ['stories', 'Geschichte'], ['parents', 'Eltern-Bereich'], ['map', 'Tänze/Weg/Post/Trickbuch'], ['end', 'Runden-Ende']];
@@ -640,24 +641,73 @@ ${mouth}</svg>`;
       `App-Version: ${window.__APP_VERSION || 'Web'}`
     ].join('\n');
   }
+  // ---------- Spielstand-Abgleich fürs Zuschauen (Kevin sieht die App mit Dianas Stand) ----------
+  const VIEWER = !!window.__VIEWER;
+  const SYNC_TOPIC = REPORT_TOPIC + '-sync';
+  let lastSnap = 0;
+  async function b64gzip(str) {
+    if (typeof CompressionStream === 'undefined') return 'j' + btoa(unescape(encodeURIComponent(str)));
+    const buf = await new Response(new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+    let bin = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+    return 'g' + btoa(bin);
+  }
+  async function unb64gzip(d) {
+    if (d[0] === 'j') return decodeURIComponent(escape(atob(d.slice(1))));
+    const bin = atob(d.slice(1)); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  }
+  async function pushSnapshot(force) {
+    if (VIEWER || state.settings.report === false) return;
+    if (!force && Date.now() - lastSnap < 300000) return; lastSnap = Date.now();
+    try {
+      const snap = Object.assign({}, state, { rec: {}, outbox: [], dances: (state.dances || []).map((d) => ({ name: d.name, props: d.props, img: '' })), _snapAt: Date.now(), _where: state.where });
+      const data = await b64gzip(JSON.stringify(snap)); const id = Date.now().toString(36); const N = Math.ceil(data.length / 3500);
+      for (let i = 0; i < N; i++) { const r = await fetch(`https://ntfy.sh/${SYNC_TOPIC}`, { method: 'POST', body: `MSS|${id}|${i}|${N}|${data.slice(i * 3500, (i + 1) * 3500)}` }); if (!r.ok) return; }
+    } catch (e) { }
+  }
+  async function fetchSnapshot() {
+    const r = await fetch(`https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=12h`); if (!r.ok) throw new Error('ntfy ' + r.status);
+    const parts = {};
+    (await r.text()).split('\n').forEach((l) => { try { const m = JSON.parse(l); const x = (m.message || '').split('|'); if (x[0] !== 'MSS') return; const [, id, i, n] = x; (parts[id] = parts[id] || { n: +n, c: {} }).c[+i] = x.slice(4).join('|'); } catch (e) { } });
+    const ids = Object.keys(parts).filter((id) => Object.keys(parts[id].c).length === parts[id].n).sort((a, b) => parseInt(b, 36) - parseInt(a, 36));
+    if (!ids.length) return null;
+    const P = parts[ids[0]]; let d = ''; for (let i = 0; i < P.n; i++) d += P.c[i];
+    return JSON.parse(await unb64gzip(d));
+  }
+  async function viewerLoad(bar) {
+    bar.textContent = '👀 Lade Dianas Spielstand …';
+    let snap = null; try { snap = await fetchSnapshot(); } catch (e) { }
+    if (snap) {
+      state = Object.assign(defaults(), snap, { settings: Object.assign(defaults().settings, snap.settings || {}, { report: false, tts: snap.settings ? snap.settings.tts : false }) });
+      state.tourSeen = 999; state.explained = Object.fromEntries(Object.keys(D.EXPLAIN || {}).map((k) => [k, 1])); save();
+    }
+    const when = snap ? new Date(snap._snapAt).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+    bar.replaceChildren(h('span', null, snap ? `👀 Dianas Spielstand von ${when}${snap._where ? ' · zuletzt: ' + snap._where : ''}` : '👀 Kein Spielstand aus den letzten 12 Stunden gefunden.'),
+      h('button', { onclick: () => viewerLoad(bar) }, '🔄 Neu laden'),
+      h('button', { onclick: async (e) => { e.target.disabled = true; try { await fetch(`https://ntfy.sh/${REPORT_TOPIC}`, { method: 'POST', body: 'spielstand' }); } catch (er) { } e.target.textContent = '⏳ Warte aufs Tablet (bis 1 Min.) …'; setTimeout(() => viewerLoad(bar), 75000); } }, '📲 Vom Tablet anfordern'),
+      h('small', null, 'Nur ansehen: Was du hier tippst, ändert nichts auf Dianas Tablet.'));
+    showHome();
+  }
   // Kevin schreibt „stand“ ins ntfy-Thema -> App antwortet mit dem kompletten Stand (wenn sie offen ist)
   async function pollCommands() {
-    if (state.settings.report === false || document.hidden) return;
+    if (VIEWER || state.settings.report === false || document.hidden) return;
     const since = state.cmdSince || Math.floor(Date.now() / 1000) - 300;
     try {
       const r = await fetch(`https://ntfy.sh/${REPORT_TOPIC}/json?poll=1&since=${since}`); if (!r.ok) return;
       const msgs = (await r.text()).split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch (e) { return null; } }).filter((m) => m && m.event === 'message');
       if (msgs.length) state.cmdSince = Math.max(...msgs.map((m) => m.time)) + 1;
       if (msgs.some((m) => /^\s*(stand|status|wo)\s*[?!.]*\s*$/i.test(m.message || ''))) sendReport(`${state.name || 'Diana'}: kompletter Stand 📋`, fullStatusText());
+      if (msgs.some((m) => /^\s*(stand|status|wo|spielstand)\s*[?!.]*\s*$/i.test(m.message || ''))) pushSnapshot(true);
       save();
     } catch (e) { }
   }
   let openedAt = Date.now(), hiddenAt = 0;
-  function appOpened(first) { openedAt = Date.now(); sendReport(`${state.name || 'Diana'} hat die App geöffnet 📱`, first ? 'App gestartet.' : 'Zurück in der App.'); }
+  function appOpened(first) { if (VIEWER) return; openedAt = Date.now(); sendReport(`${state.name || 'Diana'} hat die App geöffnet 📱`, first ? 'App gestartet.' : 'Zurück in der App.'); }
   setTimeout(() => appOpened(true), 2500);
   setTimeout(pollCommands, 4000); setInterval(pollCommands, 60000);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { hiddenAt = Date.now(); const min = Math.max(1, Math.round((Date.now() - openedAt) / 60000)); sendReport(`${state.name || 'Diana'} hat die App verlassen`, `Nach ${min} Min. Zuletzt: ${state.where || '–'}.`); }
+    if (VIEWER) return;
+    if (document.hidden) { hiddenAt = Date.now(); pushSnapshot(true); const min = Math.max(1, Math.round((Date.now() - openedAt) / 60000)); sendReport(`${state.name || 'Diana'} hat die App verlassen`, `Nach ${min} Min. Zuletzt: ${state.where || '–'}.`); }
     else if (hiddenAt && Date.now() - hiddenAt > 10 * 60000) { appOpened(false); pollCommands(); }
   });
   async function flushReports() {
@@ -2812,8 +2862,8 @@ ${mouth}</svg>`;
   // ---------- Start ----------
   window.__maxApp = {
     get state() { return state; }, setState(s) { state = Object.assign(defaults(), s); save(); }, skillStars, stageUnlocked, skillUnlocked, MSK, newRead, newMath, buildSession, graphemes,
-    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, fullStatusText, explain,
+    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, fullStatusText, explain, pushSnapshot,
     debugTask(id, kind) { startSession(poolOf(id)); S.queue = []; S.N = 99; renderTask({ id, kind, isNew: false, retry: false }); }
   };
-  showSplash();
+  if (VIEWER) { const bar = h('div', { class: 'viewer-bar' }); document.body.prepend(bar); viewerLoad(bar); } else showSplash();
 })();
