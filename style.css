@@ -733,3 +733,7 @@ button { font: inherit; color: inherit; }
 .fr-code { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
 .fr-code .note { flex-basis: 100%; margin: 0; }
 .fr-code input { font-size: 1.1rem; padding: 8px 10px; border-radius: 10px; border: 2px solid #ccc; min-width: 220px; }
+@media (min-width: 1000px) and (orientation: landscape) { .minor { grid-template-columns: repeat(4, 1fr); } }
+.home-foot { display: flex; justify-content: flex-end; gap: 10px; align-items: center; flex-wrap: wrap; }
+.help-btn { font: inherit; font-weight: 700; padding: 10px 16px; border-radius: 999px; border: 0; background: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.08); cursor: pointer; }
+.chat-open { width: 100%; margin: 4px 0 14px; font-size: 1.25rem; }

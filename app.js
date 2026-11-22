@@ -869,7 +869,7 @@ ${mouth}</svg>`;
     const today = dayNum(); const row = h('div', { class: 'days', 'aria-label': 'Geübte Tage' });
     for (let i = 6; i >= 0; i--) {
       const n = today - i; const d = state.days[dayKey(n)]; const on = d && d.s > 0;
-      row.append(h('div', { class: 'day' + (on ? ' on' : '') + (i === 0 ? ' today' : '') }, svgEl(PAW, 'paw-i'), h('span', null, i === 0 ? 'Heute' : WD[new Date(n * 86400000).getUTCDay()])));
+      row.append(h('div', { class: 'day' + (on ? ' on' : '') + (i === 0 ? ' today' : '') }, svgEl(PAW, 'paw-i'), h('span', null, WD[new Date(n * 86400000).getUTCDay()])));
     }
     return row;
   }
@@ -1006,7 +1006,7 @@ ${mouth}</svg>`;
       ? h('div', { class: 'worlds' },
         h('button', { class: 'world lese' + (leseToday() ? ' done' : ''), id: 'go-lese', onclick: () => { SFX.tap(); explain('lese', showLeseTraining); } }, h('span', { class: 'w-ico' }, '📖'), h('span', { class: 'w-name' }, 'Lese-Training'), h('span', { class: 'w-sub' }, leseToday() ? 'Heute geschafft ✓' : '5 Minuten, jeden Tag')),
         h('button', { class: 'world ice', id: 'go-math', onclick: go('math', 'p:eisbahn') }, h('span', { class: 'w-ico' }, '⛸️'), h('span', { class: 'w-name' }, 'Eisbahn'), h('span', { class: 'w-sub' }, 'Rechnen'), h('span', { class: 'w-demo' }, '13 − 5')),
-        h('button', { class: 'world pool', id: 'go-read', onclick: go('read', 'p:schwimmbad') }, h('span', { class: 'w-ico' }, '🏊'), h('span', { class: 'w-name' }, 'Schwimmbad'), h('span', { class: 'w-sub' }, 'Lesen'), h('span', { class: 'w-demo' }, h('span', { class: 'sy s0' }, 'Le'), h('span', { class: 'sy s1' }, 'sen'))),
+        h('button', { class: 'world pool', id: 'go-read', onclick: go('read', 'p:schwimmbad') }, h('span', { class: 'w-ico' }, '🏊'), h('span', { class: 'w-name' }, 'Schwimmbad'), h('span', { class: 'w-sub' }, 'Buchstaben & Wörter'), h('span', { class: 'w-demo' }, h('span', { class: 'sy s0' }, 'Le'), h('span', { class: 'sy s1' }, 'sen'))),
         h('button', { class: 'world ru', id: 'go-ru', onclick: go('ru', 'p:russisch') }, h('span', { class: 'w-ico' }, '🗣️'), h('span', { class: 'w-name' }, 'Russisch'), h('span', { class: 'w-sub' }, 'Reden & Verstehen'), h('span', { class: 'w-demo' }, 'Привет!')))
       : h('div', { class: 'sleep-card' }, h('p', { class: 'h-display' }, 'Max schläft. Morgen geht’s weiter!'),
         leseToday() ? null : h('button', { class: 'world lese', id: 'go-lese', onclick: () => { SFX.tap(); explain('lese', showLeseTraining); } }, h('span', { class: 'w-ico' }, '📖'), h('span', { class: 'w-name' }, 'Lese-Training geht noch!'), h('span', { class: 'w-sub' }, '5 Minuten')), h('p', { class: 'note' }, 'Tanz-Idee für jetzt:'), textEl(pick(D.DANCES), { cls: 'small' }));
@@ -1022,14 +1022,12 @@ ${mouth}</svg>`;
         h('button', { class: 'mini', id: 'go-story', onclick: () => { SFX.tap(); explain('story', () => showStoryList()); } }, h('span', { class: 'm-ico' }, '📖'), 'Geschichte', unreadChapter ? h('span', { class: 'badge' }, 'Neu!') : null),
         h('button', { class: 'mini', id: 'go-album', onclick: () => { SFX.tap(); explain('album', () => showAlbum()); } }, h('span', { class: 'm-ico' }, '🎀'), 'Anziehen', newSticker ? h('span', { class: 'badge' }, 'Neu!') : null),
         h('button', { class: 'mini', id: 'go-map', onclick: () => { SFX.tap(); explain('map', () => showMap()); } }, h('span', { class: 'm-ico' }, '⭐'), 'Mein Weg'),
-        h('button', { class: 'mini', id: 'go-post', onclick: () => { SFX.tap(); explain('post', () => showPosts()); } }, h('span', { class: 'm-ico' }, '📮'), 'Post', unreadPost() ? h('span', { class: 'badge' }, 'Neu!') : null),
-        h('button', { class: 'mini', id: 'go-chat', onclick: () => { SFX.tap(); explain('chat', () => showChat()); } }, h('span', { class: 'm-ico' }, '✏️'), 'Kevin schreiben', state.chatNew ? h('span', { class: 'badge' }, 'Neu!') : null),
+        h('button', { class: 'mini', id: 'go-post', onclick: () => { SFX.tap(); explain('post', () => showPosts()); } }, h('span', { class: 'm-ico' }, '📮'), 'Post & Schreiben', unreadPost() || state.chatNew ? h('span', { class: 'badge' }, 'Neu!') : null),
         h('button', { class: 'mini', id: 'go-studio', onclick: () => { SFX.tap(); explain('malen', () => showStudio()); } }, h('span', { class: 'm-ico' }, '🎨'), 'Malen'),
         h('button', { class: 'mini', id: 'go-foto', onclick: () => { SFX.tap(); explain('foto', () => showFotoList()); } }, h('span', { class: 'm-ico' }, '📸'), 'Foto-Rätsel'),
         h('button', { class: 'mini', id: 'go-dances', onclick: () => { SFX.tap(); explain('dances', () => showDances()); } }, h('span', { class: 'm-ico' }, '💃'), 'Meine Tänze'),
-        h('button', { class: 'mini', id: 'go-help', onclick: () => { SFX.tap(); showHelp(); } }, h('span', { class: 'm-ico' }, '❓'), 'Was ist was?'),
         h('button', { class: 'mini', id: 'go-tricks2', onclick: () => { SFX.tap(); explain('tricks', () => showTricks()); } }, h('span', { class: 'm-ico' }, '💡'), 'Trickbuch')),
-      h('footer', { class: 'home-foot' }, storageOK ? null : h('p', { class: 'err' }, 'Achtung: Dieser Browser speichert gerade nichts. Fortschritt geht beim Schließen verloren.'), holdButton(parentGate))
+      h('footer', { class: 'home-foot' }, storageOK ? null : h('p', { class: 'err' }, 'Achtung: Dieser Browser speichert gerade nichts. Fortschritt geht beim Schließen verloren.'), h('button', { class: 'help-btn', id: 'go-help', onclick: () => { SFX.tap(); showHelp(); } }, '❓ Was ist was?'), holdButton(parentGate))
     );
     mount(scr, 'home'); onHome = true; maybeTour(); MenuMusic.show();
     if (greet) setTimeout(() => Voice.say(can ? [varied(D.GREETS, 'g', P('p:hallo')), P('p:wohin')] : [P('p:muede')]), 250);
@@ -1862,8 +1860,10 @@ ${mouth}</svg>`;
   function showPosts() {
     const un = unlockedPosts(); const next = D.POSTS.find((p) => practiceDays() < p.tag);
     const list = h('div', { class: 'posts' }, un.slice().reverse().map(({ p, i }) => h('button', { class: 'tile post-item' + (state.posts.read[i] ? '' : ' new'), onclick: () => showPost(i) }, h('span', { class: 'post-ico' }, state.posts.read[i] ? '📭' : '📬'), h('span', null, `Brief ${i + 1} von Kevin`), state.posts.read[i] ? null : h('span', { class: 'badge' }, 'Neu!'))));
+    const chatBtn = h('button', { class: 'tile go chat-open', id: 'go-chat', onclick: () => { SFX.tap(); explain('chat', () => showChat()); } }, state.chatNew ? '💌 Kevin hat dir geantwortet! Lesen →' : '✏️ Kevin schreiben');
     const scr = h('main', { class: 'screen map' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Post von Kevin')),
+      chatBtn,
       un.length ? list : h('p', { class: 'note' }, 'Noch keine Post. Übe ein paar Tage, dann kommt ein Brief!'),
       next ? h('p', { class: 'note' }, `Nächster Brief nach ${next.tag} ${next.tag === 1 ? 'Übungstag' : 'Übungstagen'}. Du hast ${practiceDays()}.`) : null);
     mount(scr, 'home');
@@ -3342,7 +3342,7 @@ ${mouth}</svg>`;
         SFX.fanfare(); toast(r === 'ok' ? 'Kevin bekommt deine Nachricht! 💌' : r === 'aus' ? 'Schicken ist ausgeschaltet.' : 'Wird geschickt, sobald Internet da ist.', '💌'); showChat();
       } }, '💌 Abschicken'));
     const scr = h('main', { class: 'screen map studio' },
-      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, '✏️ Kevin schreiben')),
+      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showPosts()), h('h1', { class: 'h-display' }, '✏️ Kevin schreiben')),
       list, h('p', { class: 'note' }, 'Schreib mit dem Finger oder Stift auf die Linien:'), stage, h('div', { class: 'chat-tools' }, colors, actions));
     mount(scr, 'home'); state.where = 'Kevin schreiben';
     requestAnimationFrame(() => { sizeUp(); const l = scr.querySelector('.chat-list'); if (l) l.scrollTop = l.scrollHeight; });
