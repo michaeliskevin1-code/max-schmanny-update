@@ -725,7 +725,7 @@ ${mouth}</svg>`;
     if (VIEWER || state.settings.report === false) return;
     if (!force && Date.now() - lastSnap < 300000) return; lastSnap = Date.now();
     try {
-      const snap = Object.assign({}, state, { rec: {}, outbox: [], dances: (state.dances || []).map((d) => ({ name: d.name, props: d.props, img: '' })), _snapAt: Date.now(), _where: state.where });
+      const snap = Object.assign({}, state, { rec: {}, outbox: [], dances: (state.dances || []).map((d) => ({ name: d.name, props: d.props, img: '' })), chat: (state.chat || []).map((c) => Object.assign({}, c, { img: c.img ? '(Bild)' : undefined })), _snapAt: Date.now(), _where: state.where });
       const data = await b64gzip(JSON.stringify(snap)); const id = Date.now().toString(36); const N = Math.ceil(data.length / 3500);
       for (let i = 0; i < N; i++) { const r = await fetch(`https://ntfy.sh/${SYNC_TOPIC}`, { method: 'POST', body: `MSS|${id}|${i}|${N}|${data.slice(i * 3500, (i + 1) * 3500)}` }); if (!r.ok) return; }
     } catch (e) { }
@@ -765,6 +765,12 @@ ${mouth}</svg>`;
       if (msgs.length) state.cmdSince = Math.max(...msgs.map((m) => m.time)) + 1;
       if (msgs.some((m) => /^\s*(stand|status|wo)\s*[?!.]*\s*$/i.test(m.message || ''))) sendReport(`${state.name || 'Diana'}: kompletter Stand 📋`, fullStatusText());
       if (msgs.some((m) => /^\s*(stand|status|wo|spielstand)\s*[?!.]*\s*$/i.test(m.message || ''))) pushSnapshot(true);
+      for (const m of msgs) {
+        const txt = (m.message || '').trim(); const fk = txt.match(/^fotos?\s+([A-Za-z0-9_-]{20,})$/i);
+        if (fk) { unlockPrivPhotos(fk[1]).then((n) => sendReport('Familienfotos 📸', n > 0 ? `${n} Fotos sind jetzt im Foto-Rätsel ✓` : 'Der Code hat nicht gepasst.', 2)); continue; }
+        if (!txt || m.title || m.attachment || /^\s*(stand|status|wo|spielstand)\s*[?!.]*\s*$/i.test(txt)) continue;
+        addKevinMsg(txt, (m.time || 0) * 1000);
+      }
       save();
     } catch (e) { }
   }
@@ -1017,6 +1023,7 @@ ${mouth}</svg>`;
         h('button', { class: 'mini', id: 'go-album', onclick: () => { SFX.tap(); explain('album', () => showAlbum()); } }, h('span', { class: 'm-ico' }, '🎀'), 'Anziehen', newSticker ? h('span', { class: 'badge' }, 'Neu!') : null),
         h('button', { class: 'mini', id: 'go-map', onclick: () => { SFX.tap(); explain('map', () => showMap()); } }, h('span', { class: 'm-ico' }, '⭐'), 'Mein Weg'),
         h('button', { class: 'mini', id: 'go-post', onclick: () => { SFX.tap(); explain('post', () => showPosts()); } }, h('span', { class: 'm-ico' }, '📮'), 'Post', unreadPost() ? h('span', { class: 'badge' }, 'Neu!') : null),
+        h('button', { class: 'mini', id: 'go-chat', onclick: () => { SFX.tap(); explain('chat', () => showChat()); } }, h('span', { class: 'm-ico' }, '✏️'), 'Kevin schreiben', state.chatNew ? h('span', { class: 'badge' }, 'Neu!') : null),
         h('button', { class: 'mini', id: 'go-studio', onclick: () => { SFX.tap(); explain('malen', () => showStudio()); } }, h('span', { class: 'm-ico' }, '🎨'), 'Malen'),
         h('button', { class: 'mini', id: 'go-foto', onclick: () => { SFX.tap(); explain('foto', () => showFotoList()); } }, h('span', { class: 'm-ico' }, '📸'), 'Foto-Rätsel'),
         h('button', { class: 'mini', id: 'go-dances', onclick: () => { SFX.tap(); explain('dances', () => showDances()); } }, h('span', { class: 'm-ico' }, '💃'), 'Meine Tänze'),
@@ -2576,7 +2583,7 @@ ${mouth}</svg>`;
         body.replaceChildren(h('div', { class: 'lese-result' }, svgEl(svgMax({ mood: 'happy' }), 'quit-max'), h('p', { class: 'h-display' }, `${n} Silben!`), h('p', { class: 'note' }, better ? `Mehr als letztes Mal (${last.teppich})! 🚀` : 'Super gelesen!'), h('button', { class: 'tile go big', id: 'lese-next', onclick: blitz }, 'Weiter →')));
       }
       body.replaceChildren(h('h2', { class: 'lese-h' }, '🧶 Silbenteppich'), info, bar, h('div', { class: 'teppich' }, cells), btn);
-      Voice.say([{ id: 'p:lese1', text: 'Silbenteppich! Lies laut und tippe jede Silbe an.' }]);
+      Voice.say([{ id: 'p:lese1', text: 'Silbenteppich! Lies laut und tippe jede Silbe an.' }, { id: 'p:zeit', text: 'Schaffst du es, bevor die Zeit um ist?' }]);
     }
     // 2) Blitzwörter: 8 Wörter, fällige zuerst
     function blitz() {
@@ -3260,9 +3267,85 @@ ${mouth}</svg>`;
     async function refresh() { const all = await FotoDB.all(); list.replaceChildren(...all.map((f) => h('div', { class: 'fr-own-item' }, h('img', { src: f.src, alt: 'Foto' }), h('button', { class: 'p-btn', 'aria-label': 'Foto löschen', onclick: async () => { await FotoDB.del(f.id); refresh(); } }, '🗑')))); if (!all.length) list.append(h('p', { class: 'note' }, 'Noch keine eigenen Fotos.')); }
     const input = h('input', { type: 'file', accept: 'image/*', multiple: true, id: 'fr-file', style: 'display:none', onchange: async (e) => { let n = 0; for (const file of [...e.target.files].slice(0, 20)) { const src = await shrinkImage(file, 900); if (src && await FotoDB.add({ id: 'own-' + Date.now() + '-' + n, src, t: 'Ein Foto von zu Hause!' })) n++; } msg.textContent = n ? `${n} ${n === 1 ? 'Foto' : 'Fotos'} hinzugefügt ✓` : 'Das hat nicht geklappt.'; e.target.value = ''; refresh(); } });
     refresh();
+    const codeIn = h('input', { type: 'text', id: 'fr-code', placeholder: 'Code', autocomplete: 'off', class: 'p-input' });
     return h('section', { class: 'p-card' }, h('h2', null, '📸 Eigene Fotos fürs Foto-Rätsel'),
       h('p', { class: 'note' }, 'Familienfotos hier hinzufügen. Sie bleiben nur auf diesem Gerät: Sie werden nicht verschickt, nicht an Kevin gemeldet und sind nicht in der Sicherung.'),
-      input, h('button', { class: 'tile', onclick: () => input.click() }, '➕ Fotos aus der Galerie hinzufügen'), msg, list);
+      input, h('button', { class: 'tile', onclick: () => input.click() }, '➕ Fotos aus der Galerie hinzufügen'), msg,
+      D.PRIVPHOTOS ? h('div', { class: 'fr-code' }, h('p', { class: 'note' }, 'Familienfotos von Kevin (verschlüsselt eingebaut): Code von Kevin eingeben.'), codeIn, h('button', { class: 'tile', id: 'fr-code-go', onclick: async () => { const n = await unlockPrivPhotos(codeIn.value); msg.textContent = n > 0 ? `${n} Familienfotos freigeschaltet ✓` : 'Der Code passt nicht.'; refresh(); } }, '🔓 Freischalten')) : null,
+      list);
+  }
+
+  // Familienfotos: liegen verschlüsselt in data.js (öffentliches Repo). Schlüssel nur per Eltern-Bereich oder ntfy-Befehl „fotos <code>“.
+  async function unlockPrivPhotos(code) {
+    const B = D.PRIVPHOTOS; code = String(code || '').trim(); if (!B || !code || !(window.crypto && crypto.subtle)) return 0;
+    try {
+      const b64 = (x) => Uint8Array.from(atob(x), (c) => c.charCodeAt(0));
+      const k = code.replace(/-/g, '+').replace(/_/g, '/'); const raw = b64(k + '='.repeat((4 - (k.length % 4)) % 4));
+      const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+      const arr = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(B.iv) }, key, b64(B.ct))));
+      let n = 0; for (const f of arr) if (await FotoDB.add({ id: f.id, src: f.src, t: f.t })) n++;
+      try { localStorage.setItem('max-fotokey', code); } catch (e) { }
+      return n;
+    } catch (e) { return 0; }
+  }
+  setTimeout(() => { try { const k = localStorage.getItem('max-fotokey'); if (k && !VIEWER) unlockPrivPhotos(k); } catch (e) { } }, 3000);
+
+  // ---------- Kevin schreiben: Diana schreibt mit dem Stift, Kevin antwortet im ntfy-Thema mit Text ----------
+  function addKevinMsg(t, at) {
+    state.chat = (state.chat || []).concat([{ k: 1, t, at: at || Date.now() }]).slice(-30);
+    state.chatNew = (state.chatNew || 0) + 1; save();
+    try { SFX.fanfare(); } catch (e) { }
+    toast('Kevin hat dir geschrieben! 💌', '✏️');
+    if (onHome) showHome();
+  }
+  async function sendHandwriting(img) {
+    if (VIEWER || state.settings.report === false) return 'aus';
+    try {
+      const blob = await (await fetch(img)).blob();
+      const r = await fetch(`https://ntfy.sh/${REPORT_TOPIC}?title=${encodeURIComponent(`✏️ ${state.name || 'Diana'} schreibt dir`)}&message=${encodeURIComponent('Antworte einfach hier mit einer Text-Nachricht (ohne Titel) – sie sieht sie in der App unter „Kevin schreiben“.')}&filename=nachricht.jpg&tags=pencil2&priority=4`, { method: 'PUT', body: blob });
+      if (!r.ok) throw new Error('ntfy ' + r.status); return 'ok';
+    } catch (e) { state.picOut = (state.picOut || []).concat([{ img, title: `✏️ ${state.name || 'Diana'} schreibt dir` }]).slice(-3); save(); return 'später'; }
+  }
+  function showChat() {
+    state.chatNew = 0; save();
+    const fmt = (at) => { try { return new Date(at).toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+    const items = (state.chat || []).slice(-8);
+    const list = h('div', { class: 'chat-list' }, items.length ? items.map((c) => c.k
+      ? h('div', { class: 'chat-msg kevin' }, h('p', { class: 'chat-who' }, `Kevin · ${fmt(c.at)}`), h('p', { class: 'chat-t' }, c.t), h('button', { class: 'p-btn', 'aria-label': 'Vorlesen', onclick: () => Voice.say([{ text: c.t, force: true }]) }, '🔊'))
+      : h('div', { class: 'chat-msg diana' }, h('p', { class: 'chat-who' }, `Du · ${fmt(c.at)}`), c.img ? h('img', { src: c.img, alt: 'Deine Nachricht' }) : null))
+      : h('p', { class: 'note' }, 'Noch keine Nachrichten. Schreib Kevin etwas!'));
+    const bgC = h('canvas', { class: 'st-bg' }), dC = h('canvas', { class: 'st-draw', 'aria-label': 'Schreibfläche' });
+    const stage = h('div', { class: 'studio-stage chat-stage' }, bgC, dC);
+    let W = 700, H = 300, dpr = Math.max(1, window.devicePixelRatio || 1), ctx = null, undo = [], drawing = false, last = null, empty = true, color = '#2f3a8f';
+    function sizeUp() {
+      W = Math.max(280, Math.round(stage.getBoundingClientRect().width || 700)); H = Math.round(Math.max(220, Math.min(380, W * 0.5)));
+      [bgC, dC].forEach((cv) => { cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; }); stage.style.height = H + 'px';
+      const b = bgC.getContext('2d'); b.setTransform(dpr, 0, 0, dpr, 0, 0); b.fillStyle = '#fffdf6'; b.fillRect(0, 0, W, H);
+      const lh = 72; for (let y = 24; y + lh <= H; y += lh) { b.strokeStyle = '#c9d6ff'; b.lineWidth = 1.5; [0, lh * 0.33, lh * 0.66, lh].forEach((o, i) => { b.globalAlpha = i === 0 || i === 3 ? 1 : 0.55; b.beginPath(); b.moveTo(10, y + o); b.lineTo(W - 10, y + o); b.stroke(); }); b.globalAlpha = 1; }
+      ctx = dC.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    }
+    const pos = (e) => { const r = dC.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    const seg = (a, b) => { ctx.strokeStyle = color; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); };
+    dC.addEventListener('pointerdown', (e) => { e.preventDefault(); try { dC.setPointerCapture(e.pointerId); } catch (er) { } try { undo.push(ctx.getImageData(0, 0, dC.width, dC.height)); if (undo.length > 30) undo.shift(); } catch (er) { } empty = false; drawing = true; last = pos(e); seg(last, [last[0] + 0.1, last[1] + 0.1]); });
+    dC.addEventListener('pointermove', (e) => { if (!drawing) return; e.preventDefault(); const p = pos(e); seg(last, p); last = p; });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => dC.addEventListener(ev, () => { drawing = false; }));
+    const exportImg = () => { const out = document.createElement('canvas'); out.width = 700; out.height = Math.round(700 * H / W); const c = out.getContext('2d'); c.drawImage(bgC, 0, 0, out.width, out.height); c.drawImage(dC, 0, 0, out.width, out.height); return out.toDataURL('image/jpeg', 0.7); };
+    const colors = h('div', { class: 'st-colors' }, ['#2f3a8f', '#e8344e', '#2e9d4f', '#b06cff', '#222222'].map((c) => { const b = h('button', { class: 'st-color' + (c === color ? ' on' : ''), style: `background:${c}`, 'aria-label': 'Farbe', onclick: () => { color = c; colors.querySelectorAll('.on').forEach((x) => x.classList.remove('on')); b.classList.add('on'); SFX.tap(); } }); return b; }));
+    const actions = h('div', { class: 'st-actions' },
+      h('button', { class: 'tile', onclick: () => { const u = undo.pop(); if (u) ctx.putImageData(u, 0, 0); SFX.tap(); } }, '↶ Zurück'),
+      h('button', { class: 'tile', onclick: () => { ctx.clearRect(0, 0, W, H); empty = true; undo = []; SFX.tap(); } }, '🗑 Neu'),
+      h('button', { class: 'tile go', id: 'chat-send', onclick: async (e) => {
+        if (empty) { toast('Schreib erst etwas!', '✏️'); return; }
+        const img = exportImg(); e.target.disabled = true; const r = await sendHandwriting(img);
+        state.chat = (state.chat || []).concat([{ d: 1, img, at: Date.now() }]); let mine = 0; for (let i = state.chat.length - 1; i >= 0; i--) if (state.chat[i].img && ++mine > 6) state.chat[i].img = '';
+        state.chat = state.chat.slice(-30); save();
+        SFX.fanfare(); toast(r === 'ok' ? 'Kevin bekommt deine Nachricht! 💌' : r === 'aus' ? 'Schicken ist ausgeschaltet.' : 'Wird geschickt, sobald Internet da ist.', '💌'); showChat();
+      } }, '💌 Abschicken'));
+    const scr = h('main', { class: 'screen map studio' },
+      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, '✏️ Kevin schreiben')),
+      list, h('p', { class: 'note' }, 'Schreib mit dem Finger oder Stift auf die Linien:'), stage, h('div', { class: 'chat-tools' }, colors, actions));
+    mount(scr, 'home'); state.where = 'Kevin schreiben';
+    requestAnimationFrame(() => { sizeUp(); const l = scr.querySelector('.chat-list'); if (l) l.scrollTop = l.scrollHeight; });
   }
 
   // Android: Zurück-Taste führt zum Startbildschirm statt die App zu schließen
@@ -3274,7 +3357,7 @@ ${mouth}</svg>`;
   // ---------- Start ----------
   window.__maxApp = {
     get state() { return state; }, setState(s) { state = Object.assign(defaults(), s); save(); }, skillStars, stageUnlocked, skillUnlocked, MSK, newRead, newMath, buildSession, graphemes,
-    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, showFotoList, showFoto, FotoDB, showParents, showStudio, showMzList, showGallery, mzLevel, fullStatusText, explain, pushSnapshot, svgMax, svgCat,
+    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, showFotoList, showFoto, FotoDB, showChat, addKevinMsg, unlockPrivPhotos, showParents, showStudio, showMzList, showGallery, mzLevel, fullStatusText, explain, pushSnapshot, svgMax, svgCat,
     debugTask(id, kind) { startSession(poolOf(id)); S.queue = []; S.N = 99; renderTask({ id, kind, isNew: false, retry: false }); }
   };
   if (VIEWER) { const bar = h('div', { class: 'viewer-bar' }); document.body.prepend(bar); viewerLoad(bar); } else showSplash();
