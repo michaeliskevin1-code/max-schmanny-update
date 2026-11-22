@@ -686,7 +686,7 @@ ${mouth}</svg>`;
     setTimeout(() => pushSnapshot(false), 1500);
   }
   // Wo ist sie gerade? (für Kevin)
-  const WHERE = [['task ice', 'Eisbahn (Rechnen)'], ['task pool', 'Schwimmbad (Lesen)'], ['task ru', 'Russisch'], ['task', 'Aufgabe'], ['lese', 'Lese-Training'], ['album', 'Anziehen'], ['dance', 'Tanz-Pause'], ['home', 'Startseite'], ['story', 'Geschichte'], ['stories', 'Geschichte'], ['parents', 'Eltern-Bereich'], ['map', 'Tänze/Weg/Post/Trickbuch'], ['end', 'Runden-Ende']];
+  const WHERE = [['task ice', 'Eisbahn (Rechnen)'], ['task pool', 'Schwimmbad (Lesen)'], ['task ru', 'Russisch'], ['task', 'Aufgabe'], ['lese', 'Lese-Training'], ['album', 'Anziehen'], ['dance', 'Tanz-Pause'], ['home', 'Startseite'], ['story', 'Geschichte'], ['stories', 'Geschichte'], ['parents', 'Eltern-Bereich'], ['map', 'Tänze/Weg/Post/Trickbuch'], ['end', 'Runden-Ende'], ['splash', 'Startbild (Los-Knopf)'], ['setup', 'Einrichtung']];
   function whereLabel(cls) { const c = ' ' + cls + ' '; const f = WHERE.find(([k]) => k.split(' ').every((x) => c.includes(' ' + x + ' '))); return f ? f[1] : cls.replace('screen', '').trim() || '–'; }
   function fullStatusText() {
     const L = state.lese || { log: [] }; const ll = L.log.filter((x) => x.teppich != null).slice(-3).reverse();
@@ -746,8 +746,10 @@ ${mouth}</svg>`;
       state = Object.assign(defaults(), snap, { settings: Object.assign(defaults().settings, snap.settings || {}, { report: false, tts: snap.settings ? snap.settings.tts : false }) });
       state.tourSeen = 999; state.explained = Object.fromEntries(Object.keys(D.EXPLAIN || {}).map((k) => [k, 1])); save();
     }
-    const when = snap ? new Date(snap._snapAt).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
-    bar.replaceChildren(h('span', null, snap ? `👀 Dianas Spielstand von ${when}${snap._where ? ' · zuletzt: ' + snap._where : ''}` : '👀 Kein Spielstand aus den letzten 12 Stunden gefunden.'),
+    const old = !snap && state._snapAt ? state : null; // letzter Stand, den dieser Browser schon geladen hatte
+    const S0 = snap || old;
+    const when = S0 ? new Date(S0._snapAt).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+    bar.replaceChildren(h('span', null, snap ? `👀 Dianas Spielstand von ${when}${snap._where ? ' · zuletzt: ' + snap._where : ''}` : old ? `👀 Nichts Neues in den letzten 12 Stunden. Letzter bekannter Stand: ${when}` : '👀 Noch kein Spielstand. Tipp auf „Vom Tablet anfordern“, während Diana die App offen hat.'),
       h('button', { onclick: () => viewerLoad(bar) }, '🔄 Neu laden'),
       h('button', { onclick: async (e) => { e.target.disabled = true; try { await fetch(`https://ntfy.sh/${REPORT_TOPIC}`, { method: 'POST', body: 'spielstand' }); } catch (er) { } e.target.textContent = '⏳ Warte aufs Tablet (bis 1 Min.) …'; setTimeout(() => viewerLoad(bar), 75000); } }, '📲 Vom Tablet anfordern'),
       h('small', null, 'Nur ansehen: Was du hier tippst, ändert nichts auf Dianas Tablet.'));
