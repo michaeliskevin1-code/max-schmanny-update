@@ -616,3 +616,10 @@ button { font: inherit; color: inherit; }
 .viewer-bar { position: sticky; top: 0; z-index: 70; background: #15233f; color: #fff; padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; font: 600 15px/1.3 var(--body, sans-serif); }
 .viewer-bar button { background: #ffd34d; color: #15233f; border: 0; border-radius: 10px; padding: 6px 10px; font: inherit; }
 .viewer-bar small { width: 100%; text-align: center; opacity: .8; font-weight: 400; }
+.yt-dock { position: fixed; right: 10px; bottom: 10px; z-index: 40; width: 200px; background: #15233f; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+.yt-dock[hidden] { display: none; }
+.yt-dock iframe { display: block; width: 200px; height: 200px; }
+.yt-bar { display: flex; align-items: center; gap: 4px; padding: 4px 6px; color: #fff; font: 600 12px/1.2 var(--body, sans-serif); }
+.yt-t { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yt-b { background: transparent; border: 0; color: #fff; font-size: 16px; padding: 2px 4px; }
+.screen.home { padding-bottom: 240px; }

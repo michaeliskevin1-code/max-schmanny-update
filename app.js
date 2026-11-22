@@ -41,7 +41,7 @@
   function defaults() {
     return {
       v: 1, name: '', cat: 'bkh', catV: 2, ruName: '', tests: { lastAt: 0, list: [] },
-      settings: { perDay: 2, perSession: 8, tts: false, sfx: true, dance: true, mal: false, write: true, music: true },
+      settings: { perDay: 2, perSession: 8, tts: false, sfx: true, dance: true, mal: false, write: true, music: true, menuMusic: true, menuVol: 12 },
       items: {}, days: {}, extra: { day: -1, n: 0 },
       story: { unlocked: 0, lastDay: -1, read: {} },
       stickers: { owned: [], worn: {}, seen: 0 },
@@ -170,7 +170,10 @@
     }
     // part = {id, text} oder {ids:[...], text}
     async function say(parts) {
-      stop(); const my = token;
+      stop(); const my = token; try { MenuMusic.duck(true); } catch (e) { }
+      try { return await say2(parts, my); } finally { if (my === token) { try { MenuMusic.duck(false); } catch (e) { } } }
+    }
+    async function say2(parts, my) {
       for (const p of (parts || []).filter(Boolean)) {
         if (my !== token) return;
         if (p.ids) {
@@ -806,7 +809,7 @@ ${mouth}</svg>`;
 
   // ---------- Bildschirme ----------
   function mount(screen, bg) {
-    onHome = false; Voice.stop(); try { Mic.stop(); } catch (e) { } if (typeof Beat !== 'undefined') Beat.stop();
+    onHome = false; try { MenuMusic.hide(); } catch (e) { } Voice.stop(); try { Mic.stop(); } catch (e) { } if (typeof Beat !== 'undefined') Beat.stop();
     document.body.className = 'bg-' + (bg || 'home');
     app.replaceChildren(screen);
     try { state.where = whereLabel(screen.className || ''); state.whereAt = Date.now(); save(); } catch (e) { }
@@ -919,6 +922,35 @@ ${mouth}</svg>`;
     setTimeout(() => { if (onHome && !document.querySelector('.tour, .overlay')) showTour(); }, 900);
   }
   const leseToday = () => !!(state.lese && state.lese.log.some((x) => x.d === dayKey(dayNum()) && !x.partial));
+  // ---------- Kevins Musik im Menü (YouTube-Player, sichtbar unten rechts, nur auf der Startseite) ----------
+  const MenuMusic = (() => {
+    let player = null, ready = false, loading = false, idx = -1, want = false, ducked = false, failed = 0;
+    const dock = h('div', { class: 'yt-dock', hidden: true }, h('div', { id: 'yt-frame' }),
+      h('div', { class: 'yt-bar' }, h('span', { class: 'yt-t' }, '🎧 Kevins Musik'), h('button', { class: 'yt-b', 'aria-label': 'Nächstes Lied', onclick: () => next() }, '⏭'), h('button', { class: 'yt-b', 'aria-label': 'Musik aus', onclick: () => { state.settings.menuMusic = false; save(); hide(); } }, '✕')));
+    const L = () => D.MUSIC || [];
+    const vol = () => Math.round((state.settings.menuVol || 12) * (ducked ? 0.35 : 1));
+    function load() {
+      if (loading || VIEWER || !L().length) return; loading = true;
+      document.body.append(dock);
+      window.onYouTubeIframeAPIReady = () => {
+        idx = rnd(L().length);
+        player = new YT.Player('yt-frame', { width: 200, height: 200, videoId: L()[idx].yt,
+          playerVars: { playsinline: 1, controls: 0, rel: 0, modestbranding: 1, origin: location.origin, widget_referrer: 'https://michaeliskevin1-code.github.io/' },
+          events: {
+            onReady: () => { ready = true; player.setVolume(vol()); title(); if (want) player.playVideo(); },
+            onStateChange: (e) => { if (e.data === 0) next(); if (e.data === 1) failed = 0; },
+            onError: () => { if (++failed < L().length) next(); else hide(); }
+          } });
+      };
+      const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); }; document.head.append(sc);
+    }
+    function title() { const t = dock.querySelector('.yt-t'); if (t && L()[idx]) t.textContent = '🎧 ' + L()[idx].t; }
+    function next() { if (!ready) return; idx = (idx + 1 + rnd(Math.max(1, L().length - 1))) % L().length; player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
+    function show() { if (!state.settings.menuMusic || VIEWER) return; want = true; load(); dock.hidden = false; if (ready) { player.setVolume(vol()); player.playVideo(); } }
+    function hide() { want = false; dock.hidden = true; if (ready) player.pauseVideo(); }
+    function duck(on) { ducked = on; if (ready && want) player.setVolume(vol()); }
+    return { show, hide, duck, setVol() { if (ready) player.setVolume(vol()); } };
+  })();
   // Erklär-Fenster beim ersten Öffnen eines Bereichs (Kevins Stimme, sonst ausnahmsweise Gerätestimme)
   function explain(key, then) {
     const E = (D.EXPLAIN || {})[key]; state.explained = state.explained || {};
@@ -974,7 +1006,7 @@ ${mouth}</svg>`;
         h('button', { class: 'mini', id: 'go-tricks2', onclick: () => { SFX.tap(); explain('tricks', () => showTricks()); } }, h('span', { class: 'm-ico' }, '💡'), 'Trickbuch')),
       h('footer', { class: 'home-foot' }, storageOK ? null : h('p', { class: 'err' }, 'Achtung: Dieser Browser speichert gerade nichts. Fortschritt geht beim Schließen verloren.'), holdButton(parentGate))
     );
-    mount(scr, 'home'); onHome = true; maybeTour();
+    mount(scr, 'home'); onHome = true; maybeTour(); MenuMusic.show();
     if (greet) setTimeout(() => Voice.say(can ? [varied(D.GREETS, 'g', P('p:hallo')), P('p:wohin')] : [P('p:muede')]), 250);
   }
 
@@ -2762,6 +2794,8 @@ ${mouth}</svg>`;
       h('section', { class: 'p-card' }, h('h2', null, 'Ton'),
         toggle('tts', 'Gerätestimme liest vor, solange noch keine eigene Aufnahme da ist'),
         toggle('sfx', 'Klick- und Jubel-Töne'),
+        h('label', { class: 'p-toggle' }, h('input', { type: 'checkbox', id: 'set-menumusic', checked: state.settings.menuMusic ? true : null, onchange: (e) => { state.settings.menuMusic = e.target.checked; save(); } }), 'Kevins Musik leise im Menü (braucht Internet)'),
+        h('div', { class: 'p-seg' }, h('span', { class: 'lbl' }, 'Lautstärke Musik'), h('div', { class: 'seg' }, [['Sehr leise', 6], ['Leise', 12], ['Mittel', 25], ['Laut', 45]].map(([n, v]) => h('button', { class: 'seg-b' + ((state.settings.menuVol || 12) === v ? ' on' : ''), onclick: () => { state.settings.menuVol = v; save(); MenuMusic.setVol(); showParents('set'); } }, n)))),
         h('button', { class: 'tile', onclick: () => Voice.say([{ text: `Hallo ${state.name}! So klingt die Gerätestimme.` }]) }, 'Gerätestimme testen')));
   }
   // Direkte Aufnahme (nur in der Android-App; im Artefakt ist das Mikrofon gesperrt)

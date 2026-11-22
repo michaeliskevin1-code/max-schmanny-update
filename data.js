@@ -709,3 +709,18 @@ window.APPDATA.EXPLAIN = {
   ehrlich: { n: '💪 Ganz wichtig: nicht schummeln', t: 'Und noch eine letzte Sache. Es ist super, super wichtig, dass du, kleine Süße, nicht schummelst oder rätst, sondern wirklich immer, immer versuchst, es zu lösen. Und wenn es ein bisschen länger dauert, ist das okay, ist nicht schlimm. Genau deswegen ist es super wichtig, dass Sachen schwer sind oder ein bisschen länger dauern und du Sachen nicht weißt. Weil so lernst du sie.' },
   tricks: { n: '💡 Trickbuch', t: 'Das ist das Trickbuch. Hier stehen Tricks, die dir beim Rechnen und Lesen helfen. Wenn du mal nicht weiterweißt, schau hier rein.' }
 };
+
+// ---------- Kevins Musik: läuft leise im Menü (eingebetteter YouTube-Player, nur mit Internet) ----------
+window.APPDATA.MUSIC = [
+  { yt: 'cs8VlhUDna0', t: 'Lana Del Rey – Fishtail' },
+  { yt: 'zBZbFjl__Jk', t: 'Lana Del Rey – Candy Necklace' },
+  { yt: 'IuY54A3bOmg', t: 'Lana Del Rey – Ocean Blvd' },
+  { yt: 'yAKX51r7erw', t: 'Portishead – Glory Box' },
+  { yt: 'idwuizE-rgo', t: 'ange – les veines du gueush' },
+  { yt: 'dE3r8_FHGCw', t: 'Guitarricadelafuente – BABIECA!' },
+  { yt: '8YiDQk6Bgik', t: 'Warned You' },
+  { yt: 'qHX-FKTV8Rk', t: 'Staring at the Sun' },
+  { yt: '0fgK8P_1ydU', t: 'NEMIGA – Рукава' },
+  { yt: 'QSqVRNWGlKI', t: 'Mrs Magic (Orchester)' },
+  { yt: 'gsL-OQ1SXcM', t: 'Madonna – What It Feels Like for a Girl' }
+];
