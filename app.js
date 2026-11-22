@@ -926,7 +926,7 @@ ${mouth}</svg>`;
   const MenuMusic = (() => {
     let player = null, ready = false, loading = false, idx = -1, want = false, ducked = false, failed = 0;
     const dock = h('div', { class: 'yt-dock', hidden: true }, h('div', { id: 'yt-frame' }),
-      h('div', { class: 'yt-bar' }, h('span', { class: 'yt-t' }, '🎧 Kevins Musik'), h('button', { class: 'yt-b', 'aria-label': 'Nächstes Lied', onclick: () => next() }, '⏭'), h('button', { class: 'yt-b', 'aria-label': 'Musik aus', onclick: () => { state.settings.menuMusic = false; save(); hide(); } }, '✕')));
+      h('div', { class: 'yt-bar' }, h('span', { class: 'yt-t' }, '📻 Kevins Radio'), h('button', { class: 'yt-b', 'aria-label': 'Nächstes Lied', onclick: () => next() }, '⏭'), h('button', { class: 'yt-b', 'aria-label': 'Musik aus', onclick: () => { state.settings.menuMusic = false; save(); hide(); } }, '✕')));
     const L = () => D.MUSIC || [];
     const vol = () => Math.round((state.settings.menuVol || 12) * (ducked ? 0.35 : 1));
     function load() {
@@ -944,7 +944,7 @@ ${mouth}</svg>`;
       };
       const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); }; document.head.append(sc);
     }
-    function title() { const t = dock.querySelector('.yt-t'); if (t && L()[idx]) t.textContent = '🎧 ' + L()[idx].t; }
+    function title() { const t = dock.querySelector('.yt-t'); if (t && L()[idx]) t.textContent = '📻 ' + L()[idx].t; }
     function next() { if (!ready) return; idx = (idx + 1 + rnd(Math.max(1, L().length - 1))) % L().length; player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
     function show() { if (!state.settings.menuMusic || VIEWER) return; want = true; load(); dock.hidden = false; if (ready) { player.setVolume(vol()); player.playVideo(); } }
     function hide() { want = false; dock.hidden = true; if (ready) player.pauseVideo(); }
