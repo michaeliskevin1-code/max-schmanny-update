@@ -1017,6 +1017,7 @@ ${mouth}</svg>`;
         h('button', { class: 'mini', id: 'go-album', onclick: () => { SFX.tap(); explain('album', () => showAlbum()); } }, h('span', { class: 'm-ico' }, '🎀'), 'Anziehen', newSticker ? h('span', { class: 'badge' }, 'Neu!') : null),
         h('button', { class: 'mini', id: 'go-map', onclick: () => { SFX.tap(); explain('map', () => showMap()); } }, h('span', { class: 'm-ico' }, '⭐'), 'Mein Weg'),
         h('button', { class: 'mini', id: 'go-post', onclick: () => { SFX.tap(); explain('post', () => showPosts()); } }, h('span', { class: 'm-ico' }, '📮'), 'Post', unreadPost() ? h('span', { class: 'badge' }, 'Neu!') : null),
+        h('button', { class: 'mini', id: 'go-studio', onclick: () => { SFX.tap(); explain('malen', () => showStudio()); } }, h('span', { class: 'm-ico' }, '🎨'), 'Malen'),
         h('button', { class: 'mini', id: 'go-dances', onclick: () => { SFX.tap(); explain('dances', () => showDances()); } }, h('span', { class: 'm-ico' }, '💃'), 'Meine Tänze'),
         h('button', { class: 'mini', id: 'go-help', onclick: () => { SFX.tap(); showHelp(); } }, h('span', { class: 'm-ico' }, '❓'), 'Was ist was?'),
         h('button', { class: 'mini', id: 'go-tricks2', onclick: () => { SFX.tap(); explain('tricks', () => showTricks()); } }, h('span', { class: 'm-ico' }, '💡'), 'Trickbuch')),
@@ -2971,6 +2972,214 @@ ${mouth}</svg>`;
         } }, 'Lernstand löschen')));
   }
 
+  // ---------- Malstudio: frei malen, Malen nach Zahlen (an ihr Rechen-Niveau angepasst), Galerie, an Kevin schicken ----------
+  const PAINT_COLORS = ['#15233f', '#e8344e', '#ff8a00', '#ffd34d', '#3fcf6a', '#2f9e44', '#38bdf8', '#2f6fdc', '#9b6cff', '#ff5fa2', '#8a4f24', '#ffffff'];
+  const STAMPS = [
+    { id: 'max', svg: () => svgMax({ mood: 'happy', noBall: true }) }, { id: 'cat', svg: () => svgCat({}) }, { id: 'pablo', svg: () => svgPablo({}) },
+    { id: 'herz', e: '❤️' }, { id: 'stern', e: '⭐' }, { id: 'bluete', e: '🌸' }, { id: 'schmetterling', e: '🦋' }, { id: 'krone', e: '👑' }, { id: 'schleife', e: '🎀' }, { id: 'regenbogen', e: '🌈' }, { id: 'eis', e: '🍦' }, { id: 'glitzer', e: '✨' }
+  ];
+  const stampSvg = (S) => (S.svg ? S.svg() : `<svg viewBox="0 0 100 100"><text x="50" y="56" font-size="80" text-anchor="middle" dominant-baseline="middle">${S.e}</text></svg>`);
+  const BACKGROUNDS = [
+    { id: 'weiss', n: '⬜ Weiß', draw: (c, w, hh) => { c.fillStyle = '#fff'; c.fillRect(0, 0, w, hh); } },
+    { id: 'eis', n: '⛸️ Eisbahn', draw: (c, w, hh) => { let g = c.createLinearGradient(0, 0, 0, hh); g.addColorStop(0, '#cfeeff'); g.addColorStop(1, '#f4fbff'); c.fillStyle = g; c.fillRect(0, 0, w, hh); c.fillStyle = '#e8f7ff'; c.beginPath(); c.ellipse(w / 2, hh * 0.78, w * 0.48, hh * 0.2, 0, 0, 7); c.fill(); c.strokeStyle = '#a9d8f5'; c.lineWidth = 3; c.stroke(); c.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { c.beginPath(); c.arc(Math.random() * w, Math.random() * hh * 0.55, 2 + Math.random() * 3, 0, 7); c.fill(); } } },
+    { id: 'buehne', n: '🎭 Bühne', draw: (c, w, hh) => { let g = c.createLinearGradient(0, 0, 0, hh); g.addColorStop(0, '#3b1f5c'); g.addColorStop(1, '#6b3fa0'); c.fillStyle = g; c.fillRect(0, 0, w, hh); c.fillStyle = 'rgba(255,240,170,.25)'; c.beginPath(); c.moveTo(w / 2 - 30, 0); c.lineTo(w / 2 + 30, 0); c.lineTo(w / 2 + w * 0.22, hh * 0.85); c.lineTo(w / 2 - w * 0.22, hh * 0.85); c.fill(); c.fillStyle = '#c8243c'; c.fillRect(0, 0, w * 0.12, hh); c.fillRect(w * 0.88, 0, w * 0.12, hh); c.fillStyle = '#8a5a2b'; c.fillRect(0, hh * 0.85, w, hh * 0.15); } },
+    { id: 'pool', n: '🏊 Schwimmbad', draw: (c, w, hh) => { c.fillStyle = '#e9f6ff'; c.fillRect(0, 0, w, hh * 0.35); c.strokeStyle = '#cde6f5'; c.lineWidth = 1; for (let x = 0; x < w; x += 30) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, hh * 0.35); c.stroke(); } let g = c.createLinearGradient(0, hh * 0.35, 0, hh); g.addColorStop(0, '#5ec8ff'); g.addColorStop(1, '#1f7fd0'); c.fillStyle = g; c.fillRect(0, hh * 0.35, w, hh * 0.65); c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 3; for (let y = hh * 0.45; y < hh; y += 40) { c.beginPath(); for (let x = 0; x <= w; x += 20) c.lineTo(x, y + Math.sin(x / 25) * 5); c.stroke(); } } },
+    { id: 'zimmer', n: '🛋️ Zimmer', draw: (c, w, hh) => { c.fillStyle = '#ffe9d6'; c.fillRect(0, 0, w, hh); c.fillStyle = '#c99566'; c.fillRect(0, hh * 0.78, w, hh * 0.22); c.fillStyle = '#bfe6ff'; c.fillRect(w * 0.62, hh * 0.12, w * 0.26, hh * 0.32); c.strokeStyle = '#fff'; c.lineWidth = 6; c.strokeRect(w * 0.62, hh * 0.12, w * 0.26, hh * 0.32); c.beginPath(); c.moveTo(w * 0.75, hh * 0.12); c.lineTo(w * 0.75, hh * 0.44); c.stroke(); } },
+    { id: 'nacht', n: '🌙 Nacht', draw: (c, w, hh) => { let g = c.createLinearGradient(0, 0, 0, hh); g.addColorStop(0, '#0d1b3d'); g.addColorStop(1, '#2b3f7a'); c.fillStyle = g; c.fillRect(0, 0, w, hh); c.fillStyle = '#fff6c2'; c.beginPath(); c.arc(w * 0.82, hh * 0.2, 34, 0, 7); c.fill(); c.fillStyle = '#fff'; for (let i = 0; i < 60; i++) { c.beginPath(); c.arc(Math.random() * w, Math.random() * hh, Math.random() * 2 + 0.5, 0, 7); c.fill(); } } }
+  ];
+  function galleryAdd(dataUrl, title) {
+    state.gallery = state.gallery || [];
+    state.gallery.unshift({ img: dataUrl, at: Date.now(), t: title || '' });
+    state.gallery = state.gallery.slice(0, 15); save();
+    if (!storageOK) { state.gallery = state.gallery.slice(0, 6); save(); }
+  }
+  // Bild als Anhang an Kevins ntfy (kommt als Bild aufs Handy). Ohne Internet: später nochmal.
+  async function sendPicture(dataUrl, title) {
+    if (VIEWER || state.settings.report === false) return 'aus';
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const r = await fetch(`https://ntfy.sh/${REPORT_TOPIC}?title=${encodeURIComponent(title || `${state.name || 'Diana'} hat dir ein Bild gemalt 🎨`)}&filename=bild.jpg&tags=art&priority=3`, { method: 'PUT', body: blob });
+      if (!r.ok) throw new Error('ntfy ' + r.status);
+      return 'ok';
+    } catch (e) {
+      state.picOut = (state.picOut || []).concat([{ img: dataUrl, title }]).slice(-3); save(); return 'später';
+    }
+  }
+  async function flushPictures() {
+    const box = (state.picOut || []).slice(); if (!box.length) return;
+    state.picOut = []; save();
+    for (const p of box) await sendPicture(p.img, p.title);
+  }
+  setTimeout(() => { try { flushPictures(); } catch (e) { } }, 6000);
+
+  function studioTabs(active) {
+    return h('div', { class: 'tabs studio-tabs' },
+      [['frei', '🖌️ Frei malen', () => showStudio()], ['zahlen', '🔢 Malen nach Zahlen', () => showMzList()], ['galerie', '🖼️ Galerie', () => showGallery()]].map(([k, n, f]) => h('button', { class: 'tab' + (k === active ? ' on' : ''), onclick: () => { SFX.tap(); f(); } }, n)));
+  }
+
+  // ----- Frei malen -----
+  function showStudio() {
+    let color = PAINT_COLORS[1], size = 10, tool = 'pen', stamp = null, bg = BACKGROUNDS[0], hue = 0;
+    const bgC = h('canvas', { class: 'st-bg' }), dC = h('canvas', { class: 'st-draw', 'aria-label': 'Malfläche' });
+    const stage = h('div', { class: 'studio-stage' }, bgC, dC);
+    let W = 800, H = 500, dpr = Math.max(1, window.devicePixelRatio || 1), ctx = null, bctx = null, undo = [], drawing = false, last = null, empty = true;
+    const stampImgs = {};
+    STAMPS.forEach((S) => { const im = new Image(); im.src = svgSrc(stampSvg(S)); stampImgs[S.id] = im; });
+    function sizeUp() {
+      W = Math.max(280, Math.round(stage.getBoundingClientRect().width || 800)); H = Math.round(Math.min(560, Math.max(260, Math.min(W * 0.75, window.innerHeight - 150))));
+      [bgC, dC].forEach((cv) => { cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; });
+      stage.style.height = H + 'px';
+      bctx = bgC.getContext('2d'); bctx.setTransform(dpr, 0, 0, dpr, 0, 0); bg.draw(bctx, W, H);
+      ctx = dC.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    }
+    const pos = (e) => { const r = dC.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    function pushUndo() { try { undo.push(ctx.getImageData(0, 0, dC.width, dC.height)); if (undo.length > 20) undo.shift(); } catch (e) { } }
+    function seg(a, b) {
+      ctx.save();
+      if (tool === 'eraser') { ctx.globalCompositeOperation = 'destination-out'; ctx.strokeStyle = '#000'; ctx.lineWidth = size * 2.2; }
+      else if (tool === 'rainbow') { hue = (hue + 7) % 360; ctx.strokeStyle = `hsl(${hue} 90% 55%)`; ctx.lineWidth = size * 1.4; }
+      else if (tool === 'glitter') { ctx.strokeStyle = color; ctx.globalAlpha = 0.55; ctx.lineWidth = size; }
+      else { ctx.strokeStyle = color; ctx.lineWidth = size; }
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      if (tool === 'glitter') { ctx.globalAlpha = 1; for (let i = 0; i < 3; i++) { const x = b[0] + (Math.random() - 0.5) * size * 2.4, y = b[1] + (Math.random() - 0.5) * size * 2.4; ctx.fillStyle = pick(['#fff6a8', '#ffffff', '#ffd1f0', '#bdf3ff']); ctx.beginPath(); ctx.arc(x, y, Math.random() * 2.2 + 0.8, 0, 7); ctx.fill(); } }
+      ctx.restore();
+    }
+    function putStamp(p) { const S = STAMPS.find((x) => x.id === stamp); const im = stampImgs[stamp]; if (!S || !im || !im.complete) return; const w = 34 + size * 5, r = (im.naturalHeight || 1) / (im.naturalWidth || 1); ctx.drawImage(im, p[0] - w / 2, p[1] - (w * r) / 2, w, w * r); SFX.tap(); }
+    dC.addEventListener('pointerdown', (e) => { e.preventDefault(); try { dC.setPointerCapture(e.pointerId); } catch (er) { } pushUndo(); empty = false; const p = pos(e); if (tool === 'stamp') { putStamp(p); return; } drawing = true; last = p; seg(p, [p[0] + 0.1, p[1] + 0.1]); });
+    dC.addEventListener('pointermove', (e) => { if (!drawing) return; e.preventDefault(); const p = pos(e); seg(last, p); last = p; });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => dC.addEventListener(ev, () => { drawing = false; }));
+    function exportImg() { const out = document.createElement('canvas'); const ow = 900, oh = Math.round(900 * H / W); out.width = ow; out.height = oh; const c = out.getContext('2d'); c.drawImage(bgC, 0, 0, ow, oh); c.drawImage(dC, 0, 0, ow, oh); return out.toDataURL('image/jpeg', 0.78); }
+    const mark = (wrap, el) => { wrap.querySelectorAll('.on').forEach((x) => x.classList.remove('on')); el.classList.add('on'); };
+    const toolsRow = h('div', { class: 'st-tools' });
+    const toolBtn = (id, label) => { const b = h('button', { class: 'st-tool' + (tool === id ? ' on' : ''), onclick: () => { SFX.tap(); tool = id; stamp = null; mark(toolsRow, b); stampRow.querySelectorAll('.on').forEach((x) => x.classList.remove('on')); } }, label); return b; };
+    toolsRow.append(toolBtn('pen', '🖍️ Stift'), toolBtn('glitter', '✨ Glitzer'), toolBtn('rainbow', '🌈 Regenbogen'), toolBtn('eraser', '🧽 Radierer'));
+    const colors = h('div', { class: 'st-colors' }, PAINT_COLORS.map((c) => { const b = h('button', { class: 'st-color' + (c === color ? ' on' : ''), style: `background:${c}`, 'aria-label': 'Farbe', onclick: () => { color = c; if (tool === 'eraser' || tool === 'stamp' || tool === 'rainbow') { tool = 'pen'; mark(toolsRow, toolsRow.firstChild); } mark(colors, b); SFX.tap(); } }); return b; }));
+    const sizes = h('div', { class: 'st-sizes' }, [[5, 'dünn'], [10, 'mittel'], [20, 'dick']].map(([s, n]) => { const b = h('button', { class: 'st-size' + (s === size ? ' on' : ''), onclick: () => { size = s; mark(sizes, b); SFX.tap(); } }, h('span', { class: 'dot', style: `width:${s + 4}px;height:${s + 4}px` }), n); return b; }));
+    const stampRow = h('div', { class: 'st-stamps' }, STAMPS.map((S) => { const b = h('button', { class: 'st-stamp', 'aria-label': 'Stempel', onclick: () => { tool = 'stamp'; stamp = S.id; toolsRow.querySelectorAll('.on').forEach((x) => x.classList.remove('on')); mark(stampRow, b); SFX.tap(); } }, svgEl(stampSvg(S), 'st-stamp-ico')); return b; }));
+    const bgRow = h('div', { class: 'chips pick st-bgs' }, BACKGROUNDS.map((B) => { const b = h('button', { class: 'chip' + (B === bg ? ' on' : ''), onclick: () => { bg = B; bctx.setTransform(dpr, 0, 0, dpr, 0, 0); bg.draw(bctx, W, H); mark(bgRow, b); SFX.tap(); } }, B.n); return b; }));
+    const actions = h('div', { class: 'st-actions' },
+      h('button', { class: 'tile', onclick: () => { const u = undo.pop(); if (u) ctx.putImageData(u, 0, 0); SFX.tap(); } }, '↶ Zurück'),
+      h('button', { class: 'tile', onclick: () => { pushUndo(); ctx.clearRect(0, 0, W, H); empty = true; SFX.tap(); } }, '🗑 Neu'),
+      h('button', { class: 'tile go', id: 'st-save', onclick: () => { if (empty) { toast('Mal erst etwas!', '🖌️'); return; } galleryAdd(exportImg(), 'Frei gemalt'); SFX.fanfare(); toast('In deiner Galerie gespeichert!', '🖼️'); } }, '💾 Speichern'),
+      h('button', { class: 'tile go', id: 'st-send', onclick: async (e) => { if (empty) { toast('Mal erst etwas!', '🖌️'); return; } const img = exportImg(); galleryAdd(img, 'An Kevin geschickt'); e.target.disabled = true; const r = await sendPicture(img); e.target.disabled = false; SFX.fanfare(); toast(r === 'ok' ? 'Kevin bekommt dein Bild! 💌' : r === 'aus' ? 'Gespeichert! (Schicken ist ausgeschaltet)' : 'Gespeichert! Es wird geschickt, sobald Internet da ist.', '💌'); } }, '💌 An Kevin schicken'));
+    const scr = h('main', { class: 'screen map studio' },
+      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Malstudio')),
+      studioTabs('frei'), h('div', { class: 'studio-body' }, stage, h('div', { class: 'studio-side' }, h('div', { class: 'st-panel' }, toolsRow, colors, sizes), stampRow, bgRow, actions)));
+    mount(scr, 'home');
+    requestAnimationFrame(sizeUp);
+  }
+
+  // ----- Malen nach Zahlen -----
+  // Bilder 300×300: [Form, Attribute, Farb-Nr., Beschriftung x, y]. Reihenfolge = Malreihenfolge (Hintergrund zuerst).
+  const band = (r1, r2) => `M${150 - r2} 235 A${r2} ${r2} 0 0 1 ${150 + r2} 235 L${150 + r1} 235 A${r1} ${r1} 0 0 0 ${150 - r1} 235 Z`;
+  const MZ_PICS = [
+    { id: 'eis', n: 'Eis', cols: ['#bfe6ff', '#d9a066', '#ff8fc4', '#8fe3c0', '#e8344e'], parts: [['rect', { x: 0, y: 0, width: 300, height: 300 }, 0, 40, 40], ['rect', { x: 0, y: 262, width: 300, height: 38 }, 1, 50, 284], ['polygon', { points: '108,172 192,172 150,258' }, 1, 150, 205], ['circle', { cx: 122, cy: 160, r: 36 }, 2, 112, 168], ['circle', { cx: 178, cy: 160, r: 36 }, 3, 190, 168], ['circle', { cx: 150, cy: 115, r: 38 }, 2, 150, 118], ['circle', { cx: 150, cy: 64, r: 19 }, 4, 150, 67]] },
+    { id: 'haus', n: 'Haus', cols: ['#a9dcff', '#6fcf6a', '#ffd34d', '#e8544e', '#a0663a'], parts: [['rect', { x: 0, y: 0, width: 300, height: 232 }, 0, 40, 30], ['rect', { x: 0, y: 232, width: 300, height: 68 }, 1, 60, 272], ['circle', { cx: 250, cy: 52, r: 28 }, 2, 250, 55], ['rect', { x: 185, y: 78, width: 22, height: 44 }, 4, 196, 92], ['rect', { x: 70, y: 140, width: 160, height: 110 }, 2, 100, 232], ['polygon', { points: '58,142 150,68 242,142' }, 3, 150, 120], ['rect', { x: 134, y: 188, width: 34, height: 62 }, 4, 151, 224], ['rect', { x: 84, y: 158, width: 38, height: 30 }, 0, 103, 176], ['rect', { x: 178, y: 158, width: 38, height: 30 }, 0, 197, 176], ['rect', { x: 22, y: 178, width: 14, height: 58 }, 4, 29, 216], ['circle', { cx: 29, cy: 160, r: 25 }, 1, 29, 163]] },
+    { id: 'fisch', n: 'Fisch', cols: ['#7cc8ff', '#ff9f43', '#ffd34d', '#ffffff', '#b06cff'], parts: [['rect', { x: 0, y: 0, width: 300, height: 300 }, 0, 40, 40], ['polygon', { points: '72,150 18,102 18,198' }, 1, 40, 152], ['ellipse', { cx: 160, cy: 150, rx: 86, ry: 56 }, 1, 96, 152], ['polygon', { points: '128,99 168,58 196,101' }, 2, 165, 88], ['polygon', { points: '138,201 164,238 188,201' }, 2, 163, 213], ['ellipse', { cx: 130, cy: 150, rx: 12, ry: 49 }, 3, 130, 152], ['ellipse', { cx: 176, cy: 150, rx: 12, ry: 53 }, 3, 176, 152], ['circle', { cx: 216, cy: 136, r: 15 }, 3, 216, 139], ['circle', { cx: 255, cy: 78, r: 15 }, 3, 255, 81], ['circle', { cx: 276, cy: 40, r: 12 }, 3, 276, 43], ['polygon', { points: '14,300 36,226 58,300' }, 4, 36, 284]] },
+    { id: 'schmetterling', n: 'Schmetterling', cols: ['#bfe6ff', '#ff8fc4', '#b06cff', '#ffd34d', '#3b2457'], parts: [['rect', { x: 0, y: 0, width: 300, height: 300 }, 0, 36, 30], ['ellipse', { cx: 102, cy: 110, rx: 56, ry: 46 }, 1, 74, 88], ['ellipse', { cx: 198, cy: 110, rx: 56, ry: 46 }, 1, 226, 88], ['ellipse', { cx: 112, cy: 188, rx: 42, ry: 36 }, 2, 92, 172], ['ellipse', { cx: 188, cy: 188, rx: 42, ry: 36 }, 2, 208, 172], ['circle', { cx: 104, cy: 116, r: 17 }, 3, 104, 119], ['circle', { cx: 196, cy: 116, r: 17 }, 3, 196, 119], ['circle', { cx: 116, cy: 196, r: 13 }, 3, 116, 199], ['circle', { cx: 184, cy: 196, r: 13 }, 3, 184, 199], ['ellipse', { cx: 150, cy: 150, rx: 15, ry: 66 }, 4, 150, 153]] },
+    { id: 'regenbogen', n: 'Regenbogen', cols: ['#e8344e', '#ff8a00', '#ffd34d', '#3fcf6a', '#2f6fdc', '#ffffff'], parts: [['path', { d: band(120, 140) }, 0, 20, 226], ['path', { d: band(100, 120) }, 1, 40, 226], ['path', { d: band(80, 100) }, 2, 60, 226], ['path', { d: band(60, 80) }, 3, 80, 226], ['path', { d: band(40, 60) }, 4, 100, 226], ['circle', { cx: 252, cy: 55, r: 24 }, 2, 252, 58], ['circle', { cx: 42, cy: 272, r: 26 }, 5, 42, 275], ['circle', { cx: 258, cy: 272, r: 26 }, 5, 258, 275]] },
+    { id: 'max', n: 'Max', cols: ['#c9f2c7', '#2e2622', '#b77a43', '#5c3b22', '#ef7d8f'], parts: [['rect', { x: 0, y: 0, width: 300, height: 300 }, 0, 34, 30], ['polygon', { points: '74,122 50,38 124,92' }, 1, 80, 82], ['polygon', { points: '226,122 250,38 176,92' }, 1, 220, 82], ['ellipse', { cx: 150, cy: 162, rx: 88, ry: 82 }, 1, 150, 104], ['ellipse', { cx: 108, cy: 192, rx: 27, ry: 21 }, 2, 104, 196], ['ellipse', { cx: 192, cy: 192, rx: 27, ry: 21 }, 2, 196, 196], ['circle', { cx: 118, cy: 142, r: 15 }, 3, 118, 145], ['circle', { cx: 182, cy: 142, r: 15 }, 3, 182, 145], ['ellipse', { cx: 150, cy: 176, rx: 19, ry: 13 }, 3, 150, 179], ['ellipse', { cx: 150, cy: 222, rx: 14, ry: 18 }, 4, 150, 225]] }
+  ];
+  // Niveau: aktuelle freigeschaltete Plus/Minus-Stufe, ±1 je nachdem, wie das letzte Bild lief
+  function mzLevel() {
+    const PM = MSK.filter((sk) => sk.track === 'pm'); let cur = 0;
+    PM.forEach((sk, i) => { if (skillUnlocked(sk)) cur = i; });
+    state.mz = state.mz || { off: 0, done: 0 };
+    const idx = Math.max(0, Math.min(PM.length - 1, cur + 1, cur + (state.mz.off || 0)));
+    return { PM, idx, sk: PM[idx] };
+  }
+  function mzTasks(pic) {
+    const { PM, idx, sk } = mzLevel();
+    let pool = sk.ids.slice(); if (idx > 0) pool = pool.concat(PM[idx - 1].ids.filter(() => Math.random() < 0.35));
+    const by = {}; pool.forEach((id) => { const I = mathInfo(id); if (I.c >= 0) (by[I.c] = by[I.c] || []).push(id); });
+    const need = pic.cols.map((_, ci) => pic.parts.filter((p) => p[2] === ci).length);
+    const results = shuffle(Object.keys(by).map(Number)).sort((a, b) => by[b].length - by[a].length).slice(0, Math.max(pic.cols.length + 3, 8));
+    const chosen = shuffle(results).slice(0, pic.cols.length);
+    while (chosen.length < pic.cols.length) chosen.push((chosen[chosen.length - 1] || 0) + 1); // falls die Stufe sehr wenige Ergebnisse hat
+    const tasks = pic.parts.map((p) => { const c = chosen[p[2]]; const ids = by[c] || []; return ids.length ? pick(ids) : null; });
+    return { chosen, tasks, sk, need };
+  }
+  const exprOf = (id, c) => { if (!id) return String(c); const I = mathInfo(id); return `${I.a} ${I.op} ${I.b}`; };
+  function showMzList() {
+    const { sk } = mzLevel();
+    const scr = h('main', { class: 'screen map studio' },
+      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Malstudio')),
+      studioTabs('zahlen'),
+      h('p', { class: 'note' }, `Jede Farbe hat eine Zahl. Rechne die Aufgabe im Feld aus und male es mit der passenden Farbe an! Deine Aufgaben: ${sk.n}.`),
+      h('div', { class: 'mz-list' }, MZ_PICS.map((P) => h('button', { class: 'mz-card', onclick: () => { SFX.tap(); showMz(P); } }, svgEl(mzSvg(P, null, true), 'mz-thumb'), h('span', null, P.n + ((state.mz && state.mz.pics || {})[P.id] ? ' ✓' : ''))))));
+    mount(scr, 'home');
+  }
+  function mzSvg(P, fills, thumb) {
+    const parts = P.parts.map((p, i) => { const [tag, at] = p; const attrs = Object.entries(at).map(([k, v]) => `${k}="${v}"`).join(' '); const f = thumb ? P.cols[p[2]] : (fills && fills[i]) || '#ffffff'; return `<${tag} ${attrs} data-i="${i}" fill="${f}" stroke="#46546b" stroke-width="2" class="mz-part"/>`; }).join('');
+    const deco = P.id === 'max' && (thumb || (fills && fills.filter(Boolean).length === P.parts.length)) ? '' : '';
+    return `<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">${parts}${deco}<g class="mz-labels"></g></svg>`;
+  }
+  function showMz(P) {
+    const T = mzTasks(P); const fills = P.parts.map(() => null); let sel = null, errors = 0, firstTry = 0; const tried = new Set();
+    const wrap = h('div', { class: 'mz-pic' }); const say = h('p', { class: 'mz-say' }, 'Wähl unten eine Farbe, dann tipp ein Feld an!');
+    function render() {
+      wrap.innerHTML = mzSvg(P, fills);
+      const svg = wrap.querySelector('svg'); const lab = svg.querySelector('.mz-labels');
+      P.parts.forEach((p, i) => { if (fills[i]) return; const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text'); tx.setAttribute('x', p[3]); tx.setAttribute('y', p[4]); tx.setAttribute('class', 'mz-lab'); tx.textContent = exprOf(T.tasks[i], T.chosen[p[2]]); lab.append(tx); });
+      svg.querySelectorAll('.mz-part').forEach((el) => el.addEventListener('click', () => tap(+el.dataset.i, el)));
+    }
+    function tap(i, el) {
+      if (fills[i]) return;
+      const p = P.parts[i]; const right = T.chosen[p[2]]; const id = T.tasks[i];
+      say.textContent = `${exprOf(id, right)} = ?`;
+      if (sel == null) { say.textContent += '  Wähl unten eine Farbe!'; return; }
+      if (T.chosen[sel] === right) {
+        fills[i] = P.cols[p[2]]; SFX.ok();
+        if (!tried.has(i)) { firstTry++; if (id) grade(id, true); }
+        say.textContent = `${exprOf(id, right)} = ${right} ✓`;
+        render();
+        if (fills.every(Boolean)) finish();
+      } else {
+        SFX.oops(); errors++; if (!tried.has(i) && id) grade(id, false); tried.add(i);
+        el.classList.remove('shake'); void el.getBoundingClientRect(); el.classList.add('shake');
+        say.textContent = `${exprOf(id, right)} ist nicht ${T.chosen[sel]}. Rechne nochmal!`;
+      }
+    }
+    function finish() {
+      const n = P.parts.length; const ratio = firstTry / n;
+      state.mz = state.mz || { off: 0 }; state.mz.done = (state.mz.done || 0) + 1; state.mz.pics = state.mz.pics || {}; state.mz.pics[P.id] = 1;
+      // anpassen: fast alles beim ersten Mal richtig -> eine Stufe schwerer, viele Fehler -> leichter
+      if (ratio >= 0.9) state.mz.off = Math.min(1, (state.mz.off || 0) + 1); else if (ratio < 0.6) state.mz.off = Math.max(-2, (state.mz.off || 0) - 1);
+      save(); SFX.fanfare();
+      const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = 600; c.height = 600; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 600, 600); x.drawImage(img, 0, 0, 600, 600); galleryAdd(c.toDataURL('image/jpeg', 0.8), 'Malen nach Zahlen: ' + P.n); };
+      img.src = svgSrc(mzSvg(P, fills));
+      sendReport(`${state.name || 'Diana'}: Malen nach Zahlen 🎨`, `Bild „${P.n}“ fertig. ${firstTry} von ${n} Feldern beim ersten Versuch richtig. Aufgaben: ${T.sk.n}.${ratio >= 0.9 ? ' Nächstes Bild wird schwerer.' : ratio < 0.6 ? ' Nächstes Bild wird leichter.' : ''}`, 2);
+      const ov = h('div', { class: 'explain', role: 'dialog', 'aria-modal': 'true' }, h('div', { class: 'explain-card' }, h('p', { class: 'h-display' }, `${P.n} ist fertig! 🎉`), svgEl(mzSvg(P, fills), 'mz-done'), h('p', { class: 'note' }, `${firstTry} von ${n} Feldern beim ersten Mal richtig. Das Bild ist in deiner Galerie.`),
+        h('div', { class: 'explain-btns' }, h('button', { class: 'tile', onclick: () => { ov.remove(); showMzList(); } }, 'Noch ein Bild'), h('button', { class: 'tile go', onclick: async (e) => { e.target.disabled = true; const c = document.createElement('canvas'); c.width = 600; c.height = 600; const x = c.getContext('2d'); const im = new Image(); im.src = svgSrc(mzSvg(P, fills)); try { await im.decode(); } catch (er) { } x.fillStyle = '#fff'; x.fillRect(0, 0, 600, 600); x.drawImage(im, 0, 0, 600, 600); const r = await sendPicture(c.toDataURL('image/jpeg', 0.8)); toast(r === 'ok' ? 'Kevin bekommt dein Bild! 💌' : 'Wird geschickt, sobald Internet da ist.', '💌'); e.target.textContent = 'Geschickt ✓'; } }, '💌 An Kevin schicken'))));
+      document.body.append(ov);
+    }
+    const palette = h('div', { class: 'mz-palette' }, P.cols.map((c, ci) => { const b = h('button', { class: 'mz-col', style: `--c:${c}`, onclick: () => { sel = ci; palette.querySelectorAll('.on').forEach((x) => x.classList.remove('on')); b.classList.add('on'); SFX.tap(); say.textContent = `Farbe ${T.chosen[ci]}: Welche Felder ergeben ${T.chosen[ci]}?`; } }, h('span', { class: 'mz-sw' }), h('span', { class: 'mz-num' }, String(T.chosen[ci]))); return b; }));
+    const scr = h('main', { class: 'screen map studio' },
+      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showMzList()), h('h1', { class: 'h-display' }, '🔢 ' + P.n)),
+      h('div', { class: 'mz-wrap' }, wrap, h('div', { class: 'mz-side' }, say, palette)));
+    mount(scr, 'home'); render();
+  }
+
+  // ----- Galerie -----
+  function showGallery() {
+    const G = state.gallery || [];
+    const when = (t) => new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    function big(g, i) {
+      let sure = false;
+      const ov = h('div', { class: 'explain', role: 'dialog', 'aria-modal': 'true' }, h('div', { class: 'explain-card gal-big' }, h('img', { src: g.img, alt: 'Dein Bild' }), h('p', { class: 'note' }, `${g.t || 'Bild'} · ${when(g.at)}`),
+        h('div', { class: 'explain-btns' },
+          h('button', { class: 'tile', onclick: () => ov.remove() }, 'Schließen'),
+          h('button', { class: 'tile', onclick: (e) => { if (!sure) { sure = true; e.target.textContent = 'Wirklich löschen?'; return; } state.gallery.splice(i, 1); save(); ov.remove(); showGallery(); } }, '🗑 Löschen'),
+          h('button', { class: 'tile go', onclick: async (e) => { e.target.disabled = true; const r = await sendPicture(g.img); toast(r === 'ok' ? 'Kevin bekommt dein Bild! 💌' : 'Wird geschickt, sobald Internet da ist.', '💌'); e.target.textContent = 'Geschickt ✓'; } }, '💌 An Kevin schicken'))));
+      document.body.append(ov);
+    }
+    const scr = h('main', { class: 'screen map studio' },
+      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Malstudio')),
+      studioTabs('galerie'),
+      G.length ? h('div', { class: 'gallery' }, G.map((g, i) => h('button', { class: 'gal-item', onclick: () => big(g, i) }, h('img', { src: g.img, alt: 'Bild' }), h('span', null, when(g.at))))) : h('p', { class: 'note' }, 'Noch keine Bilder. Mal etwas und tipp auf „Speichern“!'));
+    mount(scr, 'home');
+  }
+
   // Android: Zurück-Taste führt zum Startbildschirm statt die App zu schließen
   if (NATIVE) {
     const AppP = plug('App');
@@ -2980,7 +3189,7 @@ ${mouth}</svg>`;
   // ---------- Start ----------
   window.__maxApp = {
     get state() { return state; }, setState(s) { state = Object.assign(defaults(), s); save(); }, skillStars, stageUnlocked, skillUnlocked, MSK, newRead, newMath, buildSession, graphemes,
-    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, fullStatusText, explain, pushSnapshot, svgMax, svgCat,
+    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, showStudio, showMzList, showGallery, mzLevel, fullStatusText, explain, pushSnapshot, svgMax, svgCat,
     debugTask(id, kind) { startSession(poolOf(id)); S.queue = []; S.N = 99; renderTask({ id, kind, isNew: false, retry: false }); }
   };
   if (VIEWER) { const bar = h('div', { class: 'viewer-bar' }); document.body.prepend(bar); viewerLoad(bar); } else showSplash();
