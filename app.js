@@ -37,7 +37,7 @@
 
   // ---------- Speicher ----------
   const KEY = 'max-lernabenteuer-v2';
-  const MIGRATE_ROUNDS = (st) => { if (st && st.settings && !st.m8) { if (st.settings.perSession === 12) st.settings.perSession = 8; st.m8 = 1; } return st; };
+  const MIGRATE_ROUNDS = (st) => { if (st && st.posts && st.postsV !== 2) { st.posts.read = {}; st.postsV = 2; } if (st && st.settings && !st.m8) { if (st.settings.perSession === 12) st.settings.perSession = 8; st.m8 = 1; } return st; };
   function defaults() {
     return {
       v: 1, name: '', cat: 'bkh', catV: 2, ruName: '', tests: { lastAt: 0, list: [] },
@@ -1646,7 +1646,7 @@ ${mouth}</svg>`;
       h('div', { class: 'letter' }, h('p', { class: 'letter-t' }, txt), h('p', { class: 'letter-sig' }, '– Kevin')),
       h('button', { class: 'tile go', onclick: () => Voice.say(langParts(txt, 'post:' + i)) }, '🔊 Vorlesen'));
     mount(scr, 'home');
-    setTimeout(() => Voice.say([P('p:post')].concat(langParts(txt, 'post:' + i))), 300);
+    setTimeout(() => Voice.say([P('p:post')]), 300); // Brief liest sie selbst; 🔊 hilft bei Bedarf
   }
 
   // ---------- Eigene Tänze ----------

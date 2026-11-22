@@ -482,11 +482,9 @@ window.APPDATA = (function () {
   };
   // Post von Kevin: Entwürfe, Kevin kann sie ändern lassen und selbst einsprechen. tag = so viele Übungstage nötig.
   const POSTS = [
-    { tag: 2, t: 'Hey {N}! Hier ist Kevin. Ich hab gehört, du übst mit Max und Schmanny. Mega! Und keine Sorge: In diesem Brief ist keine Chili. Versprochen. Vielleicht.' },
-    { tag: 5, t: 'Hallo {N}! Kevin hier. Du hast schon so oft geübt, ich bin echt stolz auf dich. Zeig mir beim nächsten Mal deinen neuen Tanz!' },
-    { tag: 8, t: 'Hi {N}! Ich hab eine Rätsel-Aufgabe für dich: Was ist 13 minus 5? Schreib es auf und zeig es Mama. Kevin.' },
-    { tag: 12, t: 'Привет, {RN}! Kevin hier. Kannst du Mama heute auf Russisch Gute Nacht sagen? Спокойной ночи! Bis bald!' },
-    { tag: 16, t: 'Hey {N}! Weißt du was? Max hat mir erzählt, dass du jetzt schon richtig schwere Aufgaben kannst. Weiter so, du Rechen-Star!' }
+    { tag: 1, t: 'Hallo {N}, Post von mir! Ich hoffe, dir geht es gerade gut und du übst fleißig. Ich bin stolz auf dich, wie du übst und nicht aufgibst. Egal, ob es falsch ist oder richtig: Ich finde es super, dass du es immer und immer weiter versuchst. Grüß Schmanny und Max von mir und Mama und Andreas. Пока! Paka Schopa Popa!' },
+    { tag: 3, t: 'Naaaaaaaa? Ich sehe, du übst super fleißig und kannst schon so viel. Ich freue mich, wenn wir uns wiedersehen. Hoffentlich ist es schon bald. Ich war heute im Kino. Der Film war super. Es hat 16 Jahre gedauert, bis er fertig wurde! Iss nicht so viele Süßigkeiten und tanz ein bisschen mehr. Hehe!' },
+    { tag: 6, t: 'Popa! Bonjour, ça va, {N}? Ich habe heute Amogus gesehen. Er hat mir gesagt, du übst klasse. Er spielt auch heimlich auf deinem Tablet, isst dabei Eis und kuschelt mit Max. Aber er löscht immer seinen Spielstand, damit es nicht auffällt. Was für ein Bursche! Ich hoffe, es geht dir gut. Ruf mich an, wenn du Lust hast, dann quatschen wir. Du kannst mich immer anrufen, ich rufe zurück. Hehehehe. Tschau!' }
   ];
   const RU_MISSIONS = [
     { ru: 'Спокойной ночи!', de: 'Sag heute Abend zu Mama: Gute Nacht!' },
