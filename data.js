@@ -706,5 +706,6 @@ window.APPDATA.EXPLAIN = {
   post: { n: '📮 Post', t: 'Hier bekommst du Post von mir! Wenn du ein paar Tage geübt hast, kommt ein neuer Brief. Tipp auf den Brief, dann kannst du ihn lesen, oder ich lese ihn dir vor.' },
   dances: { n: '💃 Meine Tänze', t: 'Das ist dein Tanzbuch. Hier erfindest du eigene Tänze. Deine Tänze kommen dann in der Tanz-Pause dran, und du tanzt sie!' },
   newdance: { n: '✏️ Tanz malen', t: 'Jetzt malst du deinen Tanz. Mal mit dem Finger, wie du dich bewegst. Unten kannst du Sachen ins Bild holen: einen Hula-Hoop-Reifen, Hanteln, eine Disco-Box, oder Max, Schmanny und Pablo. Schieb sie mit dem Finger dahin, wo du willst. Dann such einen lustigen Namen aus und speichere den Tanz.' },
+  ehrlich: { n: '💪 Ganz wichtig: nicht schummeln', t: 'Und noch eine letzte Sache. Es ist super, super wichtig, dass du, kleine Süße, nicht schummelst oder rätst, sondern wirklich immer, immer versuchst, es zu lösen. Und wenn es ein bisschen länger dauert, ist das okay, ist nicht schlimm. Genau deswegen ist es super wichtig, dass Sachen schwer sind oder ein bisschen länger dauern und du Sachen nicht weißt. Weil so lernst du sie.' },
   tricks: { n: '💡 Trickbuch', t: 'Das ist das Trickbuch. Hier stehen Tricks, die dir beim Rechnen und Lesen helfen. Wenn du mal nicht weiterweißt, schau hier rein.' }
 };

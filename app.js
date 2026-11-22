@@ -816,7 +816,7 @@ ${mouth}</svg>`;
     const E = (D.EXPLAIN || {})[key]; state.explained = state.explained || {};
     if (!E || (then && state.explained[key])) { if (then) then(); return; }
     const say = () => Voice.say([{ id: 'erk:' + key, text: E.t, force: true }]);
-    const close = () => { Voice.stop(); ov.remove(); state.explained[key] = 1; save(); if (then) then(); };
+    const close = () => { Voice.stop(); ov.remove(); state.explained[key] = 1; save(); if (key !== 'ehrlich' && !state.explained.ehrlich) explain('ehrlich', then || null); else if (then) then(); };
     const ov = h('div', { class: 'explain', role: 'dialog', 'aria-modal': 'true', 'aria-label': E.n },
       h('div', { class: 'explain-card' }, svgEl(svgMax({ mood: 'listen' }), 'explain-max'), h('h2', { class: 'h-display' }, E.n), h('p', { class: 'explain-t' }, E.t),
         h('div', { class: 'explain-btns' }, h('button', { class: 'tile', onclick: () => { SFX.tap(); say(); } }, '🔊 Nochmal hören'), h('button', { class: 'tile go', id: 'explain-ok', onclick: () => { SFX.tap(); close(); } }, then ? 'Verstanden, los! ✓' : 'Verstanden ✓'))));
