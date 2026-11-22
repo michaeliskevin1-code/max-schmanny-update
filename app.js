@@ -619,6 +619,47 @@ ${mouth}</svg>`;
     if (state.settings.report === false) return;
     state.outbox = (state.outbox || []).concat([{ title, msg, at: Date.now() }]).slice(-20); save(); flushReports();
   }
+  // Wo ist sie gerade? (für Kevin)
+  const WHERE = [['task ice', 'Eisbahn (Rechnen)'], ['task pool', 'Schwimmbad (Lesen)'], ['task ru', 'Russisch'], ['task', 'Aufgabe'], ['lese', 'Lese-Training'], ['album', 'Anziehen'], ['dance', 'Tanz-Pause'], ['home', 'Startseite'], ['story', 'Geschichte'], ['stories', 'Geschichte'], ['parents', 'Eltern-Bereich'], ['map', 'Tänze/Weg/Post/Trickbuch'], ['end', 'Runden-Ende']];
+  function whereLabel(cls) { const c = ' ' + cls + ' '; const f = WHERE.find(([k]) => k.split(' ').every((x) => c.includes(' ' + x + ' '))); return f ? f[1] : cls.replace('screen', '').trim() || '–'; }
+  function fullStatusText() {
+    const L = state.lese || { log: [] }; const ll = L.log.filter((x) => x.teppich != null).slice(-3).reverse();
+    const today = dayKey(dayNum()); const d = state.days[today];
+    const wob = Object.keys(state.items).filter((id) => (state.items[id].w || 0) >= 2 && box(id) < 3).sort((a, b) => state.items[b].w - state.items[a].w).slice(0, 6);
+    const ago = (t) => { if (!t) return '–'; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'gerade eben' : m < 60 ? `vor ${m} Min.` : m < 1440 ? `vor ${Math.round(m / 60)} Std.` : `vor ${Math.round(m / 1440)} Tagen`; };
+    return [
+      `Gerade: ${document.hidden ? 'App im Hintergrund' : 'App offen'} · ${state.where || '–'} (${ago(state.whereAt)})`,
+      `Heute: ${d ? `${d.s} Runden, ${d.t} Aufgaben, ${d.r} richtig` : 'noch nicht geübt'} · Lese-Training heute: ${leseToday() ? 'ja ✓' : 'nein'}`,
+      '', lernstandText(),
+      `Lesetext-Stufe: ${leseLvl()} von ${D.LSTUFEN.length}`,
+      ll.length ? 'Letzte Lese-Trainings: ' + ll.map((x) => `${x.d.slice(8, 10)}.${x.d.slice(5, 7)}. St.${x.lvl || 1} ${x.teppich} Silben, ${x.wpm2 || x.wpm1 || '–'} W/min, Frage ${x.frage == null ? '–' : x.frage ? '✓' : '✗'}${x.partial ? ' (abgebr.)' : ''}`).join(' | ') : 'Noch kein Lese-Training',
+      wob.length ? 'Wackelt: ' + wob.map((id) => `${itemLabel(id)} (${state.items[id].w}×)`).join(' · ') : 'Wackelt: nichts',
+      `Geschichte: ${state.story.unlocked} von ${D.STORY.length} Kapiteln frei · Post: ${Object.keys((state.posts || {}).read || {}).length} Briefe gelesen`,
+      `Anziehen: ${state.stickers.owned.length} von ${D.STICKERS.length} Sachen · Tänze: ${state.dances.length}`,
+      `Einstellungen: ${state.settings.perDay} Runden/Tag à ${state.settings.perSession} Aufgaben, Mal ${state.settings.mal ? 'an' : 'aus'}`,
+      `App-Version: ${window.__APP_VERSION || 'Web'}`
+    ].join('\n');
+  }
+  // Kevin schreibt „stand“ ins ntfy-Thema -> App antwortet mit dem kompletten Stand (wenn sie offen ist)
+  async function pollCommands() {
+    if (state.settings.report === false || document.hidden) return;
+    const since = state.cmdSince || Math.floor(Date.now() / 1000) - 300;
+    try {
+      const r = await fetch(`https://ntfy.sh/${REPORT_TOPIC}/json?poll=1&since=${since}`); if (!r.ok) return;
+      const msgs = (await r.text()).split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch (e) { return null; } }).filter((m) => m && m.event === 'message');
+      if (msgs.length) state.cmdSince = Math.max(...msgs.map((m) => m.time)) + 1;
+      if (msgs.some((m) => /^\s*(stand|status|wo)\s*[?!.]*\s*$/i.test(m.message || ''))) sendReport(`${state.name || 'Diana'}: kompletter Stand 📋`, fullStatusText());
+      save();
+    } catch (e) { }
+  }
+  let openedAt = Date.now(), hiddenAt = 0;
+  function appOpened(first) { openedAt = Date.now(); sendReport(`${state.name || 'Diana'} hat die App geöffnet 📱`, first ? 'App gestartet.' : 'Zurück in der App.'); }
+  setTimeout(() => appOpened(true), 2500);
+  setTimeout(pollCommands, 4000); setInterval(pollCommands, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { hiddenAt = Date.now(); const min = Math.max(1, Math.round((Date.now() - openedAt) / 60000)); sendReport(`${state.name || 'Diana'} hat die App verlassen`, `Nach ${min} Min. Zuletzt: ${state.where || '–'}.`); }
+    else if (hiddenAt && Date.now() - hiddenAt > 10 * 60000) { appOpened(false); pollCommands(); }
+  });
   async function flushReports() {
     const box = (state.outbox || []).slice(); if (!box.length) return;
     for (const m of box) {
@@ -660,6 +701,7 @@ ${mouth}</svg>`;
     onHome = false; Voice.stop(); try { Mic.stop(); } catch (e) { } if (typeof Beat !== 'undefined') Beat.stop();
     document.body.className = 'bg-' + (bg || 'home');
     app.replaceChildren(screen);
+    try { state.where = whereLabel(screen.className || ''); state.whereAt = Date.now(); save(); } catch (e) { }
     window.scrollTo(0, 0);
   }
   function iconBtn(label, sym, onclick, cls) { return h('button', { class: 'icon-btn ' + (cls || ''), 'aria-label': label, title: label, onclick }, sym); }
@@ -769,6 +811,25 @@ ${mouth}</svg>`;
     setTimeout(() => { if (onHome && !document.querySelector('.tour, .overlay')) showTour(); }, 900);
   }
   const leseToday = () => !!(state.lese && state.lese.log.some((x) => x.d === dayKey(dayNum()) && !x.partial));
+  // Erklär-Fenster beim ersten Öffnen eines Bereichs (Kevins Stimme, sonst ausnahmsweise Gerätestimme)
+  function explain(key, then) {
+    const E = (D.EXPLAIN || {})[key]; state.explained = state.explained || {};
+    if (!E || (then && state.explained[key])) { if (then) then(); return; }
+    const say = () => Voice.say([{ id: 'erk:' + key, text: E.t, force: true }]);
+    const close = () => { Voice.stop(); ov.remove(); state.explained[key] = 1; save(); if (then) then(); };
+    const ov = h('div', { class: 'explain', role: 'dialog', 'aria-modal': 'true', 'aria-label': E.n },
+      h('div', { class: 'explain-card' }, svgEl(svgMax({ mood: 'listen' }), 'explain-max'), h('h2', { class: 'h-display' }, E.n), h('p', { class: 'explain-t' }, E.t),
+        h('div', { class: 'explain-btns' }, h('button', { class: 'tile', onclick: () => { SFX.tap(); say(); } }, '🔊 Nochmal hören'), h('button', { class: 'tile go', id: 'explain-ok', onclick: () => { SFX.tap(); close(); } }, then ? 'Verstanden, los! ✓' : 'Verstanden ✓'))));
+    document.body.append(ov); setTimeout(say, 250);
+  }
+  const withExplain = (key, fn) => (...a) => explain(key, () => fn(...a));
+  function showHelp() {
+    const scr = h('main', { class: 'screen map' },
+      h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Was ist was?')),
+      h('p', { class: 'note' }, 'Tipp auf etwas, dann erklärt Kevin es dir nochmal.'),
+      h('div', { class: 'help-list' }, Object.entries(D.EXPLAIN || {}).map(([k, E]) => h('button', { class: 'tile', onclick: () => explain(k) }, E.n))));
+    mount(scr, 'home');
+  }
   function showHome(greet) {
     if (practiceDays() > 0 || state.sessions > 0 || TEST()) ensureMission();
     const can = canPlay();
@@ -780,10 +841,10 @@ ${mouth}</svg>`;
     maxEl.addEventListener('click', () => { maxEl.classList.remove('hop'); void maxEl.offsetWidth; maxEl.classList.add('hop'); tapSay('max', 'p:wau'); });
     catEl.addEventListener('click', () => tapSay('cat', 'p:miau'));
     pabloEl.addEventListener('click', () => { pabloEl.classList.remove('wiggle'); void pabloEl.offsetWidth; pabloEl.classList.add('wiggle'); tapSay('pablo', 'p:pablohi'); });
-    const go = (world, clip) => () => { SFX.tap(); startSession(world, clip); };
+    const go = (world, clip) => () => { SFX.tap(); explain(world, () => startSession(world, clip)); };
     const worlds = can
       ? h('div', { class: 'worlds' },
-        h('button', { class: 'world lese' + (leseToday() ? ' done' : ''), id: 'go-lese', onclick: () => { SFX.tap(); showLeseTraining(); } }, h('span', { class: 'w-ico' }, '📖'), h('span', { class: 'w-name' }, 'Lese-Training'), h('span', { class: 'w-sub' }, leseToday() ? 'Heute geschafft ✓' : '5 Minuten, jeden Tag')),
+        h('button', { class: 'world lese' + (leseToday() ? ' done' : ''), id: 'go-lese', onclick: () => { SFX.tap(); explain('lese', showLeseTraining); } }, h('span', { class: 'w-ico' }, '📖'), h('span', { class: 'w-name' }, 'Lese-Training'), h('span', { class: 'w-sub' }, leseToday() ? 'Heute geschafft ✓' : '5 Minuten, jeden Tag')),
         h('button', { class: 'world ice', id: 'go-math', onclick: go('math', 'p:eisbahn') }, h('span', { class: 'w-ico' }, '⛸️'), h('span', { class: 'w-name' }, 'Eisbahn'), h('span', { class: 'w-sub' }, 'Rechnen'), h('span', { class: 'w-demo' }, '13 − 5')),
         h('button', { class: 'world pool', id: 'go-read', onclick: go('read', 'p:schwimmbad') }, h('span', { class: 'w-ico' }, '🏊'), h('span', { class: 'w-name' }, 'Schwimmbad'), h('span', { class: 'w-sub' }, 'Lesen'), h('span', { class: 'w-demo' }, h('span', { class: 'sy s0' }, 'Le'), h('span', { class: 'sy s1' }, 'sen'))),
         h('button', { class: 'world ru', id: 'go-ru', onclick: go('ru', 'p:russisch') }, h('span', { class: 'w-ico' }, '🗣️'), h('span', { class: 'w-name' }, 'Russisch'), h('span', { class: 'w-sub' }, 'Reden & Verstehen'), h('span', { class: 'w-demo' }, 'Привет!')),
@@ -792,16 +853,17 @@ ${mouth}</svg>`;
     const scr = h('main', { class: 'screen home' },
       h('header', { class: 'home-head' }, h('h1', { class: 'hello' }, `Hallo, ${state.name}!`), TEST() ? h('p', { class: 'test-chip' }, '🧪 Test-Modus: alles frei') : null, dayStrip()),
       h('div', { class: 'scene' }, catEl, maxEl, pabloEl),
-      can && testAvailable() ? h('button', { class: 'test-banner', id: 'go-test', onclick: () => { SFX.tap(); startTest(); } }, h('span', { class: 't-ico' }, '🏅'), h('span', null, h('strong', null, 'Test-Zeit!'), h('small', null, 'Zeig, was du schon kannst'))) : null,
+      can && testAvailable() ? h('button', { class: 'test-banner', id: 'go-test', onclick: () => { SFX.tap(); explain('test', startTest); } }, h('span', { class: 't-ico' }, '🏅'), h('span', null, h('strong', null, 'Test-Zeit!'), h('small', null, 'Zeig, was du schon kannst'))) : null,
       worlds,
       missionCard(),
       h('nav', { class: 'minor' },
-        h('button', { class: 'mini', id: 'go-story', onclick: () => { SFX.tap(); showStoryList(); } }, h('span', { class: 'm-ico' }, '📖'), 'Geschichte', unreadChapter ? h('span', { class: 'badge' }, 'Neu!') : null),
-        h('button', { class: 'mini', id: 'go-album', onclick: () => { SFX.tap(); showAlbum(); } }, h('span', { class: 'm-ico' }, '🎀'), 'Anziehen', newSticker ? h('span', { class: 'badge' }, 'Neu!') : null),
-        h('button', { class: 'mini', id: 'go-map', onclick: () => { SFX.tap(); showMap(); } }, h('span', { class: 'm-ico' }, '⭐'), 'Mein Weg'),
-        h('button', { class: 'mini', id: 'go-post', onclick: () => { SFX.tap(); showPosts(); } }, h('span', { class: 'm-ico' }, '📮'), 'Post', unreadPost() ? h('span', { class: 'badge' }, 'Neu!') : null),
-        h('button', { class: 'mini', id: 'go-dances', onclick: () => { SFX.tap(); showDances(); } }, h('span', { class: 'm-ico' }, '💃'), 'Meine Tänze'),
-        h('button', { class: 'mini', id: 'go-tricks2', onclick: () => { SFX.tap(); showTricks(); } }, h('span', { class: 'm-ico' }, '💡'), 'Trickbuch')),
+        h('button', { class: 'mini', id: 'go-story', onclick: () => { SFX.tap(); explain('story', () => showStoryList()); } }, h('span', { class: 'm-ico' }, '📖'), 'Geschichte', unreadChapter ? h('span', { class: 'badge' }, 'Neu!') : null),
+        h('button', { class: 'mini', id: 'go-album', onclick: () => { SFX.tap(); explain('album', () => showAlbum()); } }, h('span', { class: 'm-ico' }, '🎀'), 'Anziehen', newSticker ? h('span', { class: 'badge' }, 'Neu!') : null),
+        h('button', { class: 'mini', id: 'go-map', onclick: () => { SFX.tap(); explain('map', () => showMap()); } }, h('span', { class: 'm-ico' }, '⭐'), 'Mein Weg'),
+        h('button', { class: 'mini', id: 'go-post', onclick: () => { SFX.tap(); explain('post', () => showPosts()); } }, h('span', { class: 'm-ico' }, '📮'), 'Post', unreadPost() ? h('span', { class: 'badge' }, 'Neu!') : null),
+        h('button', { class: 'mini', id: 'go-dances', onclick: () => { SFX.tap(); explain('dances', () => showDances()); } }, h('span', { class: 'm-ico' }, '💃'), 'Meine Tänze'),
+        h('button', { class: 'mini', id: 'go-help', onclick: () => { SFX.tap(); showHelp(); } }, h('span', { class: 'm-ico' }, '❓'), 'Was ist was?'),
+        h('button', { class: 'mini', id: 'go-tricks2', onclick: () => { SFX.tap(); explain('tricks', () => showTricks()); } }, h('span', { class: 'm-ico' }, '💡'), 'Trickbuch')),
       h('footer', { class: 'home-foot' }, storageOK ? null : h('p', { class: 'err' }, 'Achtung: Dieser Browser speichert gerade nichts. Fortschritt geht beim Schließen verloren.'), holdButton(parentGate))
     );
     mount(scr, 'home'); onHome = true; maybeTour();
@@ -1656,23 +1718,77 @@ ${mouth}</svg>`;
     const scr = h('main', { class: 'screen map' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Meine Tänze')),
       h('p', { class: 'note' }, 'Deine Tänze kommen in der Tanz-Pause dran!'),
-      state.dances.length < 8 ? h('button', { class: 'tile go', id: 'dance-new', onclick: () => newDance() }, '✏️ Neuen Tanz erfinden') : h('p', { class: 'note' }, 'Dein Tanzbuch ist voll. Lösch einen Tanz für einen neuen.'),
+      state.dances.length < 8 ? h('button', { class: 'tile go', id: 'dance-new', onclick: () => explain('newdance', newDance) }, '✏️ Neuen Tanz erfinden') : h('p', { class: 'note' }, 'Dein Tanzbuch ist voll. Lösch einen Tanz für einen neuen.'),
       list);
     mount(scr, 'home');
   }
+  // Requisiten fürs Tanz-Bild: antippen = einfügen, ziehen = verschieben.
+  const emo = (e) => `<svg viewBox="0 0 100 100"><text x="50" y="54" font-size="80" text-anchor="middle" dominant-baseline="middle">${e}</text></svg>`;
+  const DANCE_PROPS = [
+    { id: 'hula', n: 'Hula-Hoop', svg: () => '<svg viewBox="0 0 200 90"><ellipse cx="100" cy="45" rx="92" ry="34" fill="none" stroke="#ff4fa3" stroke-width="12"/><ellipse cx="100" cy="45" rx="92" ry="34" fill="none" stroke="#ffd34d" stroke-width="12" stroke-dasharray="26 26"/></svg>' },
+    { id: 'hantel', n: 'Hanteln', svg: () => '<svg viewBox="0 0 200 80"><rect x="40" y="34" width="120" height="12" rx="6" fill="#8f9aa6"/><rect x="18" y="12" width="24" height="56" rx="8" fill="#e8445a"/><rect x="4" y="22" width="16" height="36" rx="6" fill="#c2203a"/><rect x="158" y="12" width="24" height="56" rx="8" fill="#e8445a"/><rect x="180" y="22" width="16" height="36" rx="6" fill="#c2203a"/></svg>' },
+    { id: 'disco', n: 'Disco-Box', svg: () => '<svg viewBox="0 0 120 160"><rect x="6" y="6" width="108" height="148" rx="16" fill="#2b2140"/><circle cx="60" cy="48" r="24" fill="#4b3d6b"/><circle cx="60" cy="48" r="11" fill="#ff4fa3"/><circle cx="60" cy="112" r="34" fill="#4b3d6b"/><circle cx="60" cy="112" r="17" fill="#38d0ff"/><circle cx="60" cy="112" r="6" fill="#ffd34d"/><path d="M14 22 L28 22 M92 22 L106 22" stroke="#ffd34d" stroke-width="5" stroke-linecap="round"/></svg>' },
+    { id: 'kugel', n: 'Discokugel', svg: () => '<svg viewBox="0 0 120 140"><line x1="60" y1="0" x2="60" y2="22" stroke="#666" stroke-width="3"/><circle cx="60" cy="80" r="56" fill="#cfd8e3"/><g stroke="#9fb0c3" stroke-width="2"><path d="M8 62 H112 M5 80 H115 M8 98 H112 M18 44 H102 M18 116 H102 M60 24 V136 M34 30 Q22 80 34 130 M86 30 Q98 80 86 130"/></g><circle cx="40" cy="58" r="8" fill="#fff"/><circle cx="84" cy="96" r="5" fill="#ffe36b"/><circle cx="76" cy="50" r="4" fill="#9ef"/></svg>' },
+    { id: 'max', n: 'Max', svg: () => svgMax({ mood: 'happy', noBall: true }) },
+    { id: 'cat', n: 'Schmanny', svg: () => svgCat({}) },
+    { id: 'pablo', n: 'Pablo', svg: () => svgPablo({}) },
+    { id: 'mikro', n: 'Mikrofon', svg: () => emo('🎤') },
+    { id: 'note', n: 'Musik', svg: () => emo('🎶') },
+    { id: 'stern', n: 'Glitzer', svg: () => emo('✨') },
+    { id: 'herz', n: 'Herz', svg: () => emo('💖') },
+    { id: 'krone', n: 'Krone', svg: () => emo('👑') }
+  ];
+  const svgSrc = (m) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(m.includes('xmlns=') ? m : m.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"'));
+  const svgRatio = (m) => { const v = (m.match(/viewBox="([^"]+)"/) || [])[1]; if (!v) return 1; const [, , w, hh] = v.split(/\s+/).map(Number); return hh / w; };
   function newDance() {
-    const pad = writePad({ height: 260, lines: false, width: 6, color: '#b72a2a' });
+    const pad = writePad({ height: 300, lines: false, width: 6, color: '#b72a2a' });
+    const layer = h('div', { class: 'prop-layer' }); const stage = h('div', { class: 'dance-stage' }, pad.el, layer);
+    const items = []; let sel = null;
+    const tools = h('div', { class: 'prop-tools', hidden: true },
+      h('button', { class: 'p-btn', onclick: () => sel && scale(1.2) }, '➕ Größer'),
+      h('button', { class: 'p-btn', onclick: () => sel && scale(1 / 1.2) }, '➖ Kleiner'),
+      h('button', { class: 'p-btn', onclick: () => { if (sel) { sel.r = (sel.r + 20) % 360; place(sel); } } }, '↻ Drehen'),
+      h('button', { class: 'p-btn', onclick: () => { if (!sel) return; sel.el.remove(); items.splice(items.indexOf(sel), 1); select(null); } }, '🗑 Weg'));
+    function scale(f) { sel.s = Math.max(0.4, Math.min(3, sel.s * f)); place(sel); }
+    function place(it) { const w = 90 * it.s; it.el.style.width = w + 'px'; it.el.style.left = (it.x - w / 2) + 'px'; it.el.style.top = (it.y - (w * it.ratio) / 2) + 'px'; it.el.style.transform = `rotate(${it.r}deg)`; }
+    function select(it) { sel = it; items.forEach((x) => x.el.classList.toggle('sel', x === it)); tools.hidden = !it; }
+    function add(P) {
+      const m = P.svg(); const r = layer.getBoundingClientRect();
+      const it = { p: P.id, m, ratio: svgRatio(m), x: r.width / 2 + (Math.random() - 0.5) * 80, y: r.height / 2 + (Math.random() - 0.5) * 60, s: P.id === 'hula' ? 1.6 : 1, r: 0 };
+      it.el = h('div', { class: 'prop-item', html: m });
+      let drag = null;
+      it.el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); select(it); try { it.el.setPointerCapture(e.pointerId); } catch (er) { } drag = [e.clientX - it.x, e.clientY - it.y]; });
+      it.el.addEventListener('pointermove', (e) => { if (!drag) return; const R = layer.getBoundingClientRect(); it.x = Math.max(0, Math.min(R.width, e.clientX - drag[0])); it.y = Math.max(0, Math.min(R.height, e.clientY - drag[1])); place(it); });
+      ['pointerup', 'pointercancel'].forEach((ev) => it.el.addEventListener(ev, () => { drag = null; }));
+      layer.append(it.el); items.push(it); place(it); select(it); SFX.tap();
+    }
+    async function render() {
+      const cv = pad.el.querySelector('canvas'); const dpr = cv.width / cv.clientWidth;
+      const out = document.createElement('canvas'); out.width = cv.width; out.height = cv.height;
+      const c = out.getContext('2d'); c.drawImage(cv, 0, 0);
+      for (const it of items) {
+        const img = new Image(); img.src = svgSrc(it.m);
+        try { await img.decode(); } catch (e) { continue; }
+        const w = 90 * it.s * dpr, hh = w * it.ratio;
+        c.save(); c.translate(it.x * dpr, it.y * dpr); c.rotate(it.r * Math.PI / 180); c.drawImage(img, -w / 2, -hh / 2, w, hh); c.restore();
+      }
+      return out.toDataURL('image/png');
+    }
     let a = null, b = null; const nameEl = h('p', { class: 'dance-name' }, 'Wie heißt dein Tanz?');
     const upd = () => { nameEl.textContent = a && b ? `${a}-${b}` : 'Wie heißt dein Tanz?'; };
     const row = (arr, set) => h('div', { class: 'chips pick' }, arr.map((w) => { const c = h('button', { class: 'chip', onclick: () => { set(w); c.parentNode.querySelectorAll('.chip').forEach((x) => x.classList.remove('on')); c.classList.add('on'); upd(); } }, w); return c; }));
+    const palette = h('div', { class: 'prop-palette' }, DANCE_PROPS.map((P) => h('button', { class: 'prop-btn', id: 'prop-' + P.id, 'aria-label': P.n, onclick: () => add(P) }, svgEl(P.svg(), 'prop-ico'), h('span', null, P.n))));
+    pad.el.addEventListener('pointerdown', () => select(null));
     const scr = h('main', { class: 'screen map' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showDances()), h('h1', { class: 'h-display' }, 'Neuer Tanz')),
-      h('p', { class: 'note' }, 'Mal deinen Tanz: Wie bewegst du dich?'), pad.el,
-      h('button', { class: 'p-btn', onclick: () => pad.clear() }, '↺ Neu malen'),
+      h('p', { class: 'note' }, 'Mal deinen Tanz! Tipp unten auf Sachen, dann kommen sie ins Bild. Mit dem Finger kannst du sie verschieben.'),
+      stage, tools, palette,
+      h('button', { class: 'p-btn', onclick: () => { pad.clear(); items.forEach((x) => x.el.remove()); items.length = 0; select(null); } }, '↺ Alles neu'),
       nameEl, row(D.DANCE_A, (w) => { a = w; }), row(D.DANCE_B, (w) => { b = w; }),
-      h('button', { class: 'tile go', id: 'dance-save', onclick: () => {
-        if (pad.empty || !a || !b) { toast('Mal deinen Tanz und such einen Namen aus!', '✏️'); return; }
-        state.dances.push({ img: pad.dataURL(), name: `${a}-${b}` }); save(); SFX.fanfare(); toast(`Neuer Tanz: ${a}-${b}!`, '💃'); showDances();
+      h('button', { class: 'tile go', id: 'dance-save', onclick: async () => {
+        if ((pad.empty && !items.length) || !a || !b) { toast('Mal deinen Tanz und such einen Namen aus!', '✏️'); return; }
+        select(null);
+        state.dances.push({ img: await render(), name: `${a}-${b}`, props: [...new Set(items.map((x) => x.p))] }); save(); SFX.fanfare(); toast(`Neuer Tanz: ${a}-${b}!`, '💃'); showDances();
       } }, 'Tanz speichern'));
     mount(scr, 'home');
     setTimeout(() => Voice.say([P('p:tanzneu')]), 300);
@@ -1708,6 +1824,7 @@ ${mouth}</svg>`;
       own ? null : textEl(D.DANCES[i], { cls: 'sentence' }),
       h('div', { class: 'ring' }, num),
       h('button', { class: 'tile go', id: 'dance-done', onclick: () => { clearInterval(timer); SFX.tap(); nextTask(); } }, 'Fertig getanzt!'));
+    if (own && own.props && own.props.some((x) => x === 'disco' || x === 'kugel')) scr.classList.add('party');
     mount(scr, 'dance');
     const timer = setInterval(() => { left--; num.textContent = String(Math.max(0, left)); if (left <= 0) { clearInterval(timer); scr.classList.add('time-up'); } if (!document.body.contains(scr)) clearInterval(timer); }, 1000);
     setTimeout(() => { Voice.say(own ? [P('p:deintanz'), { text: own.name.replace('-', ' ') }] : [P('p:tanz'), { id: 'tanz:' + i, text: plain(D.DANCES[i]) }]).then(() => { if (document.body.contains(scr)) Beat.start(); }); }, 250);
@@ -1763,8 +1880,10 @@ ${mouth}</svg>`;
   }
 
   // ---------- Max anziehen ----------
-  function showAlbum(who) {
-    who = who || 'max';
+  const STARTER2 = ['perlen', 'konfetti', 'krawatte', 'kamera'];
+  function showAlbum(who, cat) {
+    who = who || 'max'; cat = cat || 'alle';
+    if (!state.stickers.pack2) { state.stickers.pack2 = 1; STARTER2.forEach((id) => { if (!state.stickers.owned.includes(id)) state.stickers.owned.push(id); }); setTimeout(() => toast('Neue Mode ist da! 4 Sachen sind schon für dich freigeschaltet.', '🛍️'), 400); }
     state.stickers.seen = state.stickers.owned.length;
     if (!state.stickers.wornCat) state.stickers.wornCat = {};
     save();
@@ -1772,7 +1891,8 @@ ${mouth}</svg>`;
     const draw = (cls) => (who === 'max' ? svgEl(svgMax({ mood: 'happy' }), 'c-max ' + (cls || '')) : svgEl(svgCat({ mood: 'bored' }), 'c-cat ' + (cls || '')));
     const maxBox = h('div', { class: 'album-max' }, draw());
     const redraw = () => maxBox.replaceChildren(draw('hop'));
-    const grid = h('div', { class: 'stickers' }, D.STICKERS.map((s) => {
+    const shown = D.STICKERS.filter((s) => cat === 'alle' || s.k === cat);
+    const grid = h('div', { class: 'stickers' }, shown.map((s) => {
       const own = TEST() || state.stickers.owned.includes(s.id);
       const worn = W[s.s] === s.id;
       const b = h('button', { class: 'stk' + (own ? '' : ' locked') + (worn ? ' on' : ''), disabled: !own, 'aria-label': own ? s.n : 'Noch nicht gefunden', onclick: () => {
@@ -1788,8 +1908,12 @@ ${mouth}</svg>`;
     }));
     const scr = h('main', { class: 'screen album' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Anziehen')),
-      h('div', { class: 'tabs' }, h('button', { class: 'tab' + (who === 'max' ? ' on' : ''), onclick: () => showAlbum('max') }, '🐶 Max'), h('button', { class: 'tab' + (who === 'cat' ? ' on' : ''), onclick: () => showAlbum('cat') }, '🐈 Schmanny')),
+      h('div', { class: 'tabs' }, h('button', { class: 'tab' + (who === 'max' ? ' on' : ''), onclick: () => showAlbum('max', cat) }, '🐶 Max'), h('button', { class: 'tab' + (who === 'cat' ? ' on' : ''), onclick: () => showAlbum('cat', cat) }, '🐈 Schmanny')),
       maxBox,
+      h('div', { class: 'album-actions' },
+        h('button', { class: 'tile', id: 'runway', onclick: () => { SFX.fanfare(); maxBox.classList.remove('runway'); void maxBox.offsetWidth; maxBox.classList.add('runway'); setTimeout(() => maxBox.classList.remove('runway'), 4200); } }, '📸 Laufsteg'),
+        h('button', { class: 'tile', id: 'undress', onclick: () => { Object.keys(W).forEach((k) => delete W[k]); save(); showAlbum(who, cat); } }, '🧺 Alles ausziehen')),
+      h('div', { class: 'chips pick cat-filter' }, D.STICKER_CATS.map(([k, n]) => h('button', { class: 'chip' + (k === cat ? ' on' : ''), onclick: () => showAlbum(who, k) }, n))),
       h('p', { class: 'note' }, `${state.stickers.owned.length} von ${D.STICKERS.length} gefunden. Neue gibt es manchmal nach einer Runde.`),
       grid);
     mount(scr, 'home');
@@ -1917,6 +2041,7 @@ ${mouth}</svg>`;
     g.push({ n: 'Startbildschirm: Antippen', items: [['cat', 'Schmanny'], ['max', 'Max'], ['pablo', 'Pablo']].flatMap(([w, n]) => [...Array(TAPS[w])].map((_, k) => ({ id: `tap:${w}:${k}`, t: `${n} antippen ${k + 1}`, hint: 'frei, lustig' }))) });
     g.push({ n: 'Zahlen 0 und 11–100, „ist“', items: [{ id: 'num:0', t: 'null' }].concat([...Array(90)].map((_, k) => ({ id: 'num:' + (k + 11), t: numWord(k + 11) })), [{ id: 'ist', t: 'ist' }]) });
     g.push({ n: 'Neu: Anleitungen 2. Klasse', items: Object.entries(D.PROMPTS4).map(([id, t]) => ({ id, t })) });
+    g.push({ n: 'Erklärungen beim ersten Öffnen', prio: true, items: Object.entries(D.EXPLAIN || {}).map(([k, E]) => ({ id: 'erk:' + k, t: E.t, hint: E.n })) });
     g.push({ n: 'Einführung (Kevin erklärt die App)', prio: true, items: (D.TOUR || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: 'Begrüßungen beim Öffnen', items: (D.GREETS || []).map((x) => ({ id: x.id, t: x.t })) });
     g.push({ n: 'Kurze Starts bei Übungen', items: (D.STARTS || []).map((x) => ({ id: x.id, t: x.t })) });
@@ -2501,7 +2626,8 @@ ${mouth}</svg>`;
     body.append(h('p', { class: 'note' }, `App-Version: ${window.__APP_VERSION || 'Web'}${window.__UPDATE_READY ? ` · Update ${window.__UPDATE_READY} geladen, kommt beim nächsten Start` : ''}`));
     body.append(h('section', { class: 'p-card' }, h('h2', null, '📲 Bericht an Kevins Handy'),
       h('label', { class: 'p-toggle' }, h('input', { type: 'checkbox', id: 'set-report', checked: state.settings.report !== false ? true : null, onchange: (e) => { state.settings.report = e.target.checked; save(); } }), 'Nach jeder Runde Bericht senden'),
-      h('p', { class: 'note' }, `Kevin bekommt nach jeder Runde eine Nachricht in der App „ntfy“ (Thema: ${REPORT_TOPIC}). Ohne Internet wird der Bericht später nachgeschickt. Noch nicht gesendet: ${(state.outbox || []).length}.`),
+      h('p', { class: 'note' }, `Kevin bekommt nach jeder Runde eine Nachricht in der App „ntfy“ (Thema: ${REPORT_TOPIC}), außerdem beim Öffnen und Verlassen der App. Schreibt er „stand“ ins Thema, schickt die offene App den kompletten Stand. Ohne Internet wird der Bericht später nachgeschickt. Noch nicht gesendet: ${(state.outbox || []).length}.`),
+      h('button', { class: 'tile', id: 'rep-full', onclick: () => { sendReport(`${state.name || 'Diana'}: kompletter Stand 📋`, fullStatusText()); setTimeout(() => { repMsg.textContent = (state.outbox || []).length ? 'Noch nicht angekommen. Ist das Tablet im Internet?' : 'Gesendet ✓'; }, 2500); } }, 'Kompletten Stand jetzt an Kevin schicken'),
       h('button', { class: 'tile', id: 'rep-test', onclick: async () => { sendReport('Test von ' + (state.name || 'Diana') + 's Tablet', 'Die Verbindung klappt.\n\n' + lernstandText()); setTimeout(() => { repMsg.textContent = (state.outbox || []).length ? 'Noch nicht angekommen. Ist das Tablet im Internet?' : 'Gesendet ✓'; }, 2500); } }, 'Test-Nachricht senden'), repMsg));
     const nameIn = h('input', { id: 'set-name', type: 'text', value: state.name, maxlength: '20', onchange: (e) => { const v = e.target.value.trim(); if (v) { state.name = v; save(); } } });
     const today = dayNum();
@@ -2518,6 +2644,7 @@ ${mouth}</svg>`;
         h('div', { class: 'p-seg' }, h('span', { class: 'lbl' }, 'Lesetext-Stufe'), h('div', { class: 'seg', id: 'set-lese' }, ['auto', 1, 2, 3, 4].map((v) => h('button', { class: 'seg-b' + (String(state.settings.leseLvl || 'auto') === String(v) ? ' on' : ''), onclick: () => { state.settings.leseLvl = v; if (v !== 'auto') { state.lese = state.lese || { log: [] }; state.lese.lvl = v; state.lese.up = 0; state.lese.down = 0; } save(); showParents('set'); } }, v === 'auto' ? 'Automatisch' : String(v))))),
         h('p', { class: 'note' }, `Automatisch: eine Stufe höher nach 2 Trainings mit richtiger Frage und mindestens ${LESE_UP} Wörtern/Minute beim 2. Lesen (bei ${LESE_JUMP}+ sofort), eine tiefer nach 2 falschen Fragen oder unter ${LESE_DOWN} Wörtern/Minute. Aktuell: Stufe ${leseLvl()}.`),
         h('label', { class: 'p-toggle' }, h('input', { type: 'checkbox', id: 'set-mal', checked: state.settings.mal ? true : null, onchange: (e) => { state.settings.mal = e.target.checked; save(); } }), 'Mal-Aufgaben einschalten (erst, wenn sie in der Schule dran sind)'),
+        h('button', { class: 'tile', id: 'explain-reset', onclick: (e) => { state.explained = {}; save(); e.target.textContent = 'Erklärungen kommen wieder ✓'; } }, 'Erklär-Fenster beim nächsten Öffnen wieder zeigen'),
         h('button', { class: 'tile', id: 'extra-round', onclick: (e) => { if (state.extra.day === today) state.extra.n++; else state.extra = { day: today, n: 1 }; save(); e.target.textContent = 'Extra-Runde für heute freigeschaltet ✓'; } }, 'Heute eine Extra-Runde freischalten')),
       h('section', { class: 'p-card' }, h('h2', null, 'Russisch'),
         h('label', { for: 'set-runame', class: 'lbl' }, 'Ihr Name auf Russisch (für „Меня зовут …“)'),
@@ -2685,7 +2812,7 @@ ${mouth}</svg>`;
   // ---------- Start ----------
   window.__maxApp = {
     get state() { return state; }, setState(s) { state = Object.assign(defaults(), s); save(); }, skillStars, stageUnlocked, skillUnlocked, MSK, newRead, newMath, buildSession, graphemes,
-    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour,
+    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, fullStatusText, explain,
     debugTask(id, kind) { startSession(poolOf(id)); S.queue = []; S.N = 99; renderTask({ id, kind, isNew: false, retry: false }); }
   };
   showSplash();

@@ -276,8 +276,46 @@ window.APPDATA = (function () {
     { id: 'kopfhoerer', e: '🎧', n: 'Kopfhörer', s: 'head' },
     { id: 'diamant', e: '💎', n: 'Glitzerstein', s: 'neck' },
     { id: 'ring', e: '💍', n: 'Ring', s: 'hand' },
-    { id: 'tshirt', e: '👚', n: 'Shirt', s: 'body' }
+    { id: 'tshirt', e: '👚', n: 'Shirt', s: 'body' },
+    { id: 'perlen', e: '📿', n: 'Perlenkette', s: 'neck', k: 'lux' },
+    { id: 'heels', e: '👠', n: 'High Heels', s: 'feet', k: 'lux' },
+    { id: 'stiefel', e: '👢', n: 'Lederstiefel', s: 'feet', k: 'lux' },
+    { id: 'mantel', e: '🧥', n: 'Edler Mantel', s: 'body', k: 'lux' },
+    { id: 'boerse', e: '👛', n: 'Designer-Börse', s: 'hand', k: 'lux' },
+    { id: 'shopping', e: '🛍️', n: 'Shoppingtüten', s: 'hand', k: 'lux' },
+    { id: 'parfum', e: '🧴', n: 'Parfüm', s: 'hand', k: 'lux' },
+    { id: 'kimono', e: '👘', n: 'Seidenkimono', s: 'body', k: 'lux' },
+    { id: 'konfetti', e: '🎉', n: 'Konfetti', s: 'hand', k: 'party' },
+    { id: 'konfettikugel', e: '🎊', n: 'Konfettikugel', s: 'hand', k: 'party' },
+    { id: 'maske', e: '🎭', n: 'Party-Maske', s: 'eyes', k: 'party' },
+    { id: 'gitarre', e: '🎸', n: 'E-Gitarre', s: 'hand', k: 'party' },
+    { id: 'trompete', e: '🎺', n: 'Trompete', s: 'hand', k: 'party' },
+    { id: 'glitzer', e: '✨', n: 'Glitzerregen', s: 'head', k: 'party' },
+    { id: 'festkleid', e: '🥻', n: 'Festkleid', s: 'body', k: 'party' },
+    { id: 'krawatte', e: '👔', n: 'Hemd & Krawatte', s: 'body', k: 'buero' },
+    { id: 'koffer', e: '💼', n: 'Aktenkoffer', s: 'hand', k: 'buero' },
+    { id: 'lesebrille', e: '👓', n: 'Lesebrille', s: 'eyes', k: 'buero' },
+    { id: 'laptop', e: '💻', n: 'Laptop', s: 'hand', k: 'buero' },
+    { id: 'kaffee', e: '☕', n: 'Kaffee (für Max: Kakao)', s: 'hand', k: 'buero' },
+    { id: 'handy', e: '📱', n: 'Handy', s: 'hand', k: 'buero' },
+    { id: 'doktorhut', e: '🎓', n: 'Doktorhut', s: 'head', k: 'buero' },
+    { id: 'fueller', e: '🖊️', n: 'Füller', s: 'hand', k: 'buero' },
+    { id: 'kamera', e: '📸', n: 'Kamera', s: 'hand', k: 'model' },
+    { id: 'blumen', e: '💐', n: 'Blumenstrauß', s: 'hand', k: 'model' },
+    { id: 'rose', e: '🌹', n: 'Rose', s: 'hand', k: 'model' },
+    { id: 'schmetterling', e: '🦋', n: 'Schmetterling', s: 'head', k: 'model' },
+    { id: 'bluete', e: '🌸', n: 'Blüte', s: 'head', k: 'model' },
+    { id: 'jeans', e: '👖', n: 'Jeans', s: 'body', k: 'model' },
+    { id: 'sneaker', e: '👟', n: 'Sneaker', s: 'feet', k: 'model' },
+    { id: 'schirm', e: '☂️', n: 'Regenschirm', s: 'hand', k: 'model' },
+    { id: 'boxen', e: '🥊', n: 'Boxhandschuh', s: 'hand', k: 'sport' },
+    { id: 'fussball', e: '⚽', n: 'Fußball', s: 'hand', k: 'sport' },
+    { id: 'socken', e: '🧦', n: 'Kuschelsocken', s: 'feet', k: 'spass' }
   ];
+  // Kategorien zum Filtern beim Anziehen (alte Sachen ohne k bekommen sie hier)
+  const STICKER_CATS = [['alle', 'Alles'], ['lux', '💎 Luxus'], ['party', '🎉 Party'], ['buero', '💼 Büro'], ['model', '📸 Model'], ['sport', '⚽ Sport'], ['spass', '😜 Spaß']];
+  const OLD_K = { krone: 'lux', tasche: 'lux', diamant: 'lux', ring: 'lux', zylinder: 'party', ballon: 'party', mikro: 'party', stern: 'party', kleid: 'party', kopfhoerer: 'party', brille: 'model', schleife: 'model', sonnenhut: 'model', lippe: 'model', nagel: 'model', skates: 'sport', ballett: 'sport', taucher: 'sport', medaille: 'sport', kappe: 'sport', tennis: 'sport', pokal: 'sport' };
+  STICKERS.forEach((x) => { if (!x.k) x.k = OLD_K[x.id] || 'spass'; });
 
   // Sprach-Clips: Kevin spricht sie ein. Bis dahin liest die Gerätestimme.
   const PROMPTS = {
@@ -520,7 +558,7 @@ window.APPDATA = (function () {
   return {
     PROMPTS3, POSTS, RU_MISSIONS, DANCE_A, DANCE_B, PM_STORIES, TRICKS,
     RU_WORDS, RU_PHRASES, RU_EXTRA, PROMPTS2,
-    LETTERS, WORDS, SENTENCES, STORY, DANCES, STICKERS, PROMPTS, PRAISE_CLIPS, OOPS_CLIPS, PRAISE_MATH, PRAISE_READ, PRAISE_RETRY, PRAISE_STREAK, REWARD_CLIPS,
+    LETTERS, WORDS, SENTENCES, STORY, DANCES, STICKERS, STICKER_CATS, PROMPTS, PRAISE_CLIPS, OOPS_CLIPS, PRAISE_MATH, PRAISE_READ, PRAISE_RETRY, PRAISE_STREAK, REWARD_CLIPS,
     PRAISE_TEXT, OOPS_TEXT, MATH_STORIES, CAT_COLORS,
     REIHEN: [2, 10, 5, 1, 4, 3, 6, 9, 8, 7],
     FACT_ORDER: [1, 2, 10, 5, 3, 4, 6, 9, 8, 7],
@@ -653,3 +691,20 @@ window.APPDATA.TOUR = [
 // ---------- Abwechslung: Begrüßungen beim Öffnen, kurze Starts bei Übungen ----------
 window.APPDATA.GREETS = ['Hallo Diana, schön, dass du da bist!', 'Da ist ja meine Lieblingsschwester!', 'Hi Diana! Alle haben schon auf dich gewartet.', 'Na?', 'Diana ist da!', 'Bonjour, ça va?', 'Hü-hü! Schmanny ist sogar wach geworden für dich.', 'Na …', 'Moin moin!', 'Bonjour!', 'Привет, Popa!', 'Alleeee …'].map((t, i) => ({ id: 'gruss:' + (i + 1), t }));
 window.APPDATA.STARTS = ['Let’s go!', 'Los geht’s!', 'Auf geht’s!', 'Bereit? Los!', 'Na dann, zeig mal, was du kannst!', 'Und los!', 'Woohoo!'].map((t, i) => ({ id: 'start:' + (i + 1), t }));
+
+// ---------- Erklärungen beim ersten Öffnen (Kevin spricht sie ein: Clip-ID 'erk:<key>') ----------
+window.APPDATA.EXPLAIN = {
+  lese: { n: '📖 Lese-Training', t: 'Das ist dein Lese-Training. Es hat drei Teile. Erst kommt der Silbenteppich: Lies die Silben laut und tipp jede an, 30 Sekunden lang. Dann kommen Blitzwörter: Ein Wort blitzt kurz auf, und du tippst, welches es war. Zum Schluss liest du einen kleinen Text zweimal laut und beantwortest eine Frage. Wenn du gut liest, werden die Texte länger, und du bekommst einen Stern mehr.' },
+  math: { n: '⛸️ Eisbahn', t: 'Willkommen auf der Eisbahn! Hier rechnest du. Tipp auf die richtige Antwort. Wenn du nicht weiterweißt, tipp auf die Glühbirne, dann bekommst du einen Tipp. In der Mitte jeder Runde gibt es eine Tanz-Pause.' },
+  read: { n: '🏊 Schwimmbad', t: 'Das ist das Schwimmbad. Hier übst du Buchstaben, Silben, Wörter und Sätze. Manchmal hörst du etwas und tippst es an, manchmal liest du Max laut vor. Sag ehrlich, ob es geklappt hat. So lernst du am meisten.' },
+  ru: { n: '🗣️ Russisch', t: 'Hier lernst du Russisch sprechen und verstehen. Hör gut zu und sag die Wörter laut nach. Danach tippst du, ob du es richtig gesagt hast. Schreiben musst du hier nichts.' },
+  mix: { n: '🎲 Alles gemischt', t: 'Hier kommt alles gemischt: Lesen, Rechnen und Russisch. Meistens Lesen, weil das gerade am wichtigsten ist.' },
+  test: { n: '🏅 Test', t: 'Test-Zeit! Hier zeigst du, was du schon kannst. Es gibt keine Tipps, aber das ist nicht schlimm. Gib einfach dein Bestes. Am Ende siehst du, wie viel du geschafft hast.' },
+  story: { n: '📖 Geschichte', t: 'Hier ist deine Geschichte. Lies erst selbst ein Kapitel. Wenn du ein Wort nicht schaffst, tipp es an, dann hörst du es. Danach lese ich dir das Kapitel vor. Neue Kapitel bekommst du, wenn du übst.' },
+  album: { n: '🎀 Anziehen', t: 'Hier kannst du Max und Schmanny anziehen. Oben wählst du, wen du anziehst. Mit den Knöpfen suchst du Luxus, Party, Büro oder Model-Sachen aus. Tipp eine Sache an, dann wird sie angezogen. Neue Sachen gibt es als Geschenk nach dem Üben. Und tipp auf Laufsteg, dann macht Max eine Modenschau!' },
+  map: { n: '⭐ Mein Weg', t: 'Das ist dein Weg. Hier siehst du, wie weit du schon gekommen bist. Jeder Stern zeigt, was du schon sicher kannst.' },
+  post: { n: '📮 Post', t: 'Hier bekommst du Post von mir! Wenn du ein paar Tage geübt hast, kommt ein neuer Brief. Tipp auf den Brief, dann kannst du ihn lesen, oder ich lese ihn dir vor.' },
+  dances: { n: '💃 Meine Tänze', t: 'Das ist dein Tanzbuch. Hier erfindest du eigene Tänze. Deine Tänze kommen dann in der Tanz-Pause dran, und du tanzt sie!' },
+  newdance: { n: '✏️ Tanz malen', t: 'Jetzt malst du deinen Tanz. Mal mit dem Finger, wie du dich bewegst. Unten kannst du Sachen ins Bild holen: einen Hula-Hoop-Reifen, Hanteln, eine Disco-Box, oder Max, Schmanny und Pablo. Schieb sie mit dem Finger dahin, wo du willst. Dann such einen lustigen Namen aus und speichere den Tanz.' },
+  tricks: { n: '💡 Trickbuch', t: 'Das ist das Trickbuch. Hier stehen Tricks, die dir beim Rechnen und Lesen helfen. Wenn du mal nicht weiterweißt, schau hier rein.' }
+};
