@@ -7,6 +7,8 @@
   const app = document.getElementById('app');
   // Android-App (Capacitor): eigene Sprachausgabe, Mikrofon, Zurück-Taste
   const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  // Kevin testet im Claude-Artefakt (Web): nie Tageslimit, alles offen. Dianas Tablet ist NATIVE.
+  const KEVIN_WEB = !NATIVE && !window.__VIEWER && !window.__forceTablet;
   const plug = (n) => { try { return NATIVE && window.Capacitor.registerPlugin ? window.Capacitor.registerPlugin(n) : null; } catch (e) { return null; } };
   const NTTS = plug('TextToSpeech');
   const CAN_MIC = NATIVE && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
@@ -656,7 +658,7 @@ ${mouth}</svg>`;
     renderTask(S.queue.shift());
   }
   function sessionsToday() { const d = state.days[dayKey(dayNum())]; return d ? d.s : 0; }
-  function canPlay() { if (TEST()) return true; const today = dayNum(); return sessionsToday() < state.settings.perDay + (state.extra.day === today ? state.extra.n : 0); }
+  function canPlay() { if (TEST() || KEVIN_WEB) return true; const today = dayNum(); return sessionsToday() < state.settings.perDay + (state.extra.day === today ? state.extra.n : 0); }
 
   // ---------- Bericht an Kevins Handy (ntfy-App) ----------
   const REPORT_TOPIC = 'maxschmanny-20c1bdecb986';
@@ -986,6 +988,10 @@ ${mouth}</svg>`;
   function showHome(greet) {
     if (practiceDays() > 0 || state.sessions > 0 || TEST()) ensureMission();
     const can = canPlay();
+    // Malen, Foto-Rätsel, Tänze erst, wenn die Runden für heute geschafft sind (Max schläft)
+    const funOpen = TEST() || KEVIN_WEB || sessionsToday() >= state.settings.perDay;
+    const fun = (fn) => funOpen ? fn : () => { SFX.tap(); toast('Erst die Aufgaben für heute! Wenn Max schläft, darfst du das. 😴', '🔒'); };
+    const lockMark = funOpen ? null : h('span', { class: 'lock-badge' }, '🔒');
     const unreadChapter = state.story.unlocked > 0 && !state.story.read[state.story.unlocked - 1];
     const newSticker = state.stickers.owned.length > (state.stickers.seen || 0);
     const maxEl = svgEl(svgMax({ mood: can ? 'happy' : 'sleep' }), 'c-max');
@@ -1008,7 +1014,7 @@ ${mouth}</svg>`;
         h('button', { class: 'world ice', id: 'go-math', onclick: go('math', 'p:eisbahn') }, h('span', { class: 'w-ico' }, '⛸️'), h('span', { class: 'w-name' }, 'Eisbahn'), h('span', { class: 'w-sub' }, 'Rechnen'), h('span', { class: 'w-demo' }, '13 − 5')),
         h('button', { class: 'world pool', id: 'go-read', onclick: go('read', 'p:schwimmbad') }, h('span', { class: 'w-ico' }, '🏊'), h('span', { class: 'w-name' }, 'Schwimmbad'), h('span', { class: 'w-sub' }, 'Buchstaben & Wörter'), h('span', { class: 'w-demo' }, h('span', { class: 'sy s0' }, 'Le'), h('span', { class: 'sy s1' }, 'sen'))),
         h('button', { class: 'world ru', id: 'go-ru', onclick: go('ru', 'p:russisch') }, h('span', { class: 'w-ico' }, '🗣️'), h('span', { class: 'w-name' }, 'Russisch'), h('span', { class: 'w-sub' }, 'Reden & Verstehen'), h('span', { class: 'w-demo' }, 'Привет!')))
-      : h('div', { class: 'sleep-card' }, h('p', { class: 'h-display' }, 'Max schläft. Morgen geht’s weiter!'),
+      : h('div', { class: 'sleep-card' }, h('p', { class: 'h-display' }, 'Max schläft. Morgen geht’s weiter!'), h('p', { class: 'note sleep-fun' }, 'Jetzt darfst du malen, Foto-Rätsel spielen und tanzen! 🎨📸💃'),
         leseToday() ? null : h('button', { class: 'world lese', id: 'go-lese', onclick: () => { SFX.tap(); explain('lese', showLeseTraining); } }, h('span', { class: 'w-ico' }, '📖'), h('span', { class: 'w-name' }, 'Lese-Training geht noch!'), h('span', { class: 'w-sub' }, '5 Minuten')), h('p', { class: 'note' }, 'Tanz-Idee für jetzt:'), textEl(pick(D.DANCES), { cls: 'small' }));
     const scr = h('main', { class: 'screen home' },
       h('header', { class: 'home-head' }, h('h1', { class: 'hello' }, `Hallo, ${state.name}!`), TEST() ? h('p', { class: 'test-chip' }, '🧪 Test-Modus: alles frei') : null, dayStrip()),
@@ -1023,9 +1029,9 @@ ${mouth}</svg>`;
         h('button', { class: 'mini', id: 'go-album', onclick: () => { SFX.tap(); explain('album', () => showAlbum()); } }, h('span', { class: 'm-ico' }, '🎀'), 'Anziehen', newSticker ? h('span', { class: 'badge' }, 'Neu!') : null),
         h('button', { class: 'mini', id: 'go-map', onclick: () => { SFX.tap(); explain('map', () => showMap()); } }, h('span', { class: 'm-ico' }, '⭐'), 'Mein Weg'),
         h('button', { class: 'mini', id: 'go-post', onclick: () => { SFX.tap(); explain('post', () => showPosts()); } }, h('span', { class: 'm-ico' }, '📮'), 'Post & Schreiben', unreadPost() || state.chatNew ? h('span', { class: 'badge' }, 'Neu!') : null),
-        h('button', { class: 'mini', id: 'go-studio', onclick: () => { SFX.tap(); explain('malen', () => showStudio()); } }, h('span', { class: 'm-ico' }, '🎨'), 'Malen'),
-        h('button', { class: 'mini', id: 'go-foto', onclick: () => { SFX.tap(); explain('foto', () => showFotoList()); } }, h('span', { class: 'm-ico' }, '📸'), 'Foto-Rätsel'),
-        h('button', { class: 'mini', id: 'go-dances', onclick: () => { SFX.tap(); explain('dances', () => showDances()); } }, h('span', { class: 'm-ico' }, '💃'), 'Meine Tänze'),
+        h('button', { class: 'mini' + (funOpen ? '' : ' locked'), id: 'go-studio', onclick: fun(() => { SFX.tap(); explain('malen', () => showStudio()); }) }, h('span', { class: 'm-ico' }, '🎨'), 'Malen', lockMark && lockMark.cloneNode(true)),
+        h('button', { class: 'mini' + (funOpen ? '' : ' locked'), id: 'go-foto', onclick: fun(() => { SFX.tap(); explain('foto', () => showFotoList()); }) }, h('span', { class: 'm-ico' }, '📸'), 'Foto-Rätsel', lockMark && lockMark.cloneNode(true)),
+        h('button', { class: 'mini' + (funOpen ? '' : ' locked'), id: 'go-dances', onclick: fun(() => { SFX.tap(); explain('dances', () => showDances()); }) }, h('span', { class: 'm-ico' }, '💃'), 'Meine Tänze', lockMark && lockMark.cloneNode(true)),
         h('button', { class: 'mini', id: 'go-tricks2', onclick: () => { SFX.tap(); explain('tricks', () => showTricks()); } }, h('span', { class: 'm-ico' }, '💡'), 'Trickbuch')),
       h('footer', { class: 'home-foot' }, storageOK ? null : h('p', { class: 'err' }, 'Achtung: Dieser Browser speichert gerade nichts. Fortschritt geht beim Schließen verloren.'), h('button', { class: 'help-btn', id: 'go-help', onclick: () => { SFX.tap(); showHelp(); } }, '❓ Was ist was?'), holdButton(parentGate))
     );
