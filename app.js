@@ -953,13 +953,13 @@ ${mouth}</svg>`;
           playerVars: { playsinline: 1, controls: 0, rel: 0, modestbranding: 1, origin: location.origin, widget_referrer: 'https://michaeliskevin1-code.github.io/' },
           events: {
             onReady: () => { ready = true; player.setVolume(vol()); title(); if (want) player.playVideo(); },
-            onStateChange: (e) => { if (e.data === 0) next(); if (e.data === 1) failed = 0; },
+            onStateChange: (e) => { if (e.data === 0) next(); if (e.data === 1) { failed = 0; title(); } },
             onError: () => { if (++failed < L().length) next(); else hide(); }
           } });
       };
       const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); }; document.head.append(sc);
     }
-    function title() { const t = dock.querySelector('.yt-t'); if (t && L()[idx]) t.textContent = '📻 ' + L()[idx].t; }
+    function title() { const t = dock.querySelector('.yt-t'); if (!t || !L()[idx]) return; let n = L()[idx].t; try { const d = player && player.getVideoData && player.getVideoData(); if (d && d.title) n = d.title; } catch (e) { } t.textContent = '📻 ' + (n || 'Kevins Radio'); }
     function next() { if (!ready) return; idx = draw(); player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
     function show() { if (!state.settings.menuMusic || VIEWER) return; want = true; load(); dock.hidden = false; if (ready) { player.setVolume(vol()); player.playVideo(); } }
     function hide() { want = false; dock.hidden = true; if (ready) player.pauseVideo(); }
