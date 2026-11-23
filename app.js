@@ -705,6 +705,7 @@ ${mouth}</svg>`;
       `Geschichte: ${state.story.unlocked} von ${D.STORY.length} Kapiteln frei · Post: ${Object.keys((state.posts || {}).read || {}).length} Briefe gelesen`,
       `Anziehen: ${state.stickers.owned.length} von ${D.STICKERS.length} Sachen · Tänze: ${state.dances.length}`,
       `Einstellungen: ${state.settings.perDay} Runden/Tag à ${state.settings.perSession} Aufgaben, Mal ${state.settings.mal ? 'an' : 'aus'}`,
+      `Radio: ${Object.keys(state.musicBad || {}).length ? 'gehen nicht: ' + Object.keys(state.musicBad).map((id) => 'youtu.be/' + id).join(' ') : 'alle Lieder liefen bisher'}`,
       `App-Version: ${window.__APP_VERSION || 'Web'}`
     ].join('\n');
   }
@@ -939,7 +940,8 @@ ${mouth}</svg>`;
   // ---------- Kevins Musik im Menü (YouTube-Player, sichtbar unten rechts, nur auf der Startseite) ----------
   const MenuMusic = (() => {
     let player = null, ready = false, loading = false, idx = -1, want = false, ducked = false, failed = 0, bag = [];
-    const draw = () => { if (!bag.length) bag = shuffle(L().map((_, i) => i).filter((i) => i !== idx)); return bag.pop(); };
+    const bad = () => (state.musicBad || {});
+    const draw = () => { if (!bag.length) bag = shuffle(L().map((_, i) => i).filter((i) => i !== idx && !bad()[L()[i].yt])); if (!bag.length) bag = shuffle(L().map((_, i) => i)); return bag.pop(); };
     const dock = h('div', { class: 'yt-dock', hidden: true }, h('div', { id: 'yt-frame' }),
       h('div', { class: 'yt-bar' }, h('span', { class: 'yt-t' }, '📻 Kevins Radio'), h('button', { class: 'yt-b', 'aria-label': 'Nächstes Lied', onclick: () => next() }, '⏭'), h('button', { class: 'yt-b', 'aria-label': 'Musik aus', onclick: () => { state.settings.menuMusic = false; save(); hide(); } }, '✕')));
     const L = () => D.MUSIC || [];
@@ -954,7 +956,7 @@ ${mouth}</svg>`;
           events: {
             onReady: () => { ready = true; player.setVolume(vol()); title(); if (want) player.playVideo(); },
             onStateChange: (e) => { if (e.data === 0) next(); if (e.data === 1) { failed = 0; title(); } },
-            onError: () => { if (++failed < L().length) next(); else hide(); }
+            onError: (e) => { try { const id = L()[idx].yt; state.musicBad = Object.assign({}, state.musicBad, { [id]: (e && e.data) || 1 }); save(); } catch (er) { } if (++failed < L().length) next(); else hide(); }
           } });
       };
       const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); }; document.head.append(sc);
