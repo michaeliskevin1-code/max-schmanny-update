@@ -770,7 +770,8 @@ window.APPDATA.MUSIC = [
   { yt: 'T-5xhFxcJmU', t: '' },
   { yt: 'MjlJYFCsrB4', t: '' },
   { yt: '5x5TUM64rZk', t: '' },
-  { yt: 'NyDz4Okg-Hs', t: '' }
+  { yt: 'NyDz4Okg-Hs', t: '' },
+  { yt: '5dIRPEPR9xA', t: '' }
 ];
 
 // ---------- Fotos fürs Foto-Rätsel (nur Tiere und Sachen; Familienfotos kommen lokal übers Eltern-Menü dazu) ----------
