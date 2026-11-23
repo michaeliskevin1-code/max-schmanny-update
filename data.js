@@ -716,6 +716,7 @@ window.APPDATA.EXPLAIN = {
 
 // ---------- Kevins Musik: läuft leise im Menü (eingebetteter YouTube-Player, nur mit Internet) ----------
 window.APPDATA.MUSIC = [
+  { yt: 'oR30PyN0CPg', t: '', first: true },
   { yt: 'hNFoCOKk7LE', t: 'Lana Del Rey – Peppers' },
   { yt: 'cs8VlhUDna0', t: 'Lana Del Rey – Fishtail' },
   { yt: 'zBZbFjl__Jk', t: 'Lana Del Rey – Candy Necklace' },

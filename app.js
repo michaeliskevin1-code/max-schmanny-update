@@ -950,7 +950,7 @@ ${mouth}</svg>`;
       if (loading || VIEWER || !L().length) return; loading = true;
       document.body.append(dock);
       window.onYouTubeIframeAPIReady = () => {
-        idx = draw();
+        const fi = L().findIndex((m) => m.first && !bad()[m.yt]); idx = fi >= 0 ? fi : draw();
         player = new YT.Player('yt-frame', { width: 200, height: 200, videoId: L()[idx].yt,
           playerVars: { playsinline: 1, controls: 0, rel: 0, modestbranding: 1, origin: location.origin, widget_referrer: 'https://michaeliskevin1-code.github.io/' },
           events: {
