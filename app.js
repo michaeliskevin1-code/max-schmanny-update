@@ -938,6 +938,7 @@ ${mouth}</svg>`;
   }
   const leseToday = () => !!(state.lese && state.lese.log.some((x) => x.d === dayKey(dayNum()) && !x.partial));
   // ---------- Kevins Musik im Menü (YouTube-Player, sichtbar unten rechts, nur auf der Startseite) ----------
+  const RADIO_URL = 'https://michaeliskevin1-code.github.io/max-schmanny-update/radio.html';
   const MenuMusic = (() => {
     let player = null, ready = false, loading = false, idx = -1, want = false, ducked = false, failed = 0, bag = [];
     const bad = () => (state.musicBad || {});
@@ -953,18 +954,37 @@ ${mouth}</svg>`;
     function load() {
       if (loading || VIEWER || !L().length) return; loading = true;
       document.body.append(dock);
+      const fi = L().findIndex((m) => m.first && !bad()[m.yt]); idx = fi >= 0 ? fi : draw();
+      const H = {
+        onReady: () => { ready = true; player.setVolume(vol()); title(); if (want && !held) player.playVideo(); },
+        onStateChange: (e) => { if (e.data === 0) next(); if (e.data === 1) { failed = 0; title(); } },
+        onError: (e) => {
+          const code = (e && e.data) || 0;
+          try { if ([100, 101, 150].includes(code)) { const id = L()[idx].yt; state.musicBad = Object.assign({}, state.musicBad, { [id]: code }); save(); } } catch (er) { }
+          radioReport('Fehler ' + code + ' bei youtu.be/' + ((L()[idx] || {}).yt || '?'));
+          if (++failed < Math.min(L().length, 8)) next(); else { hide(); radioReport('Radio aufgegeben nach ' + failed + ' Fehlern'); }
+        }
+      };
+      if (NATIVE) {
+        // In der App über die github.io-Seite abspielen (YouTube akzeptiert https://localhost nicht immer)
+        const fr = h('iframe', { src: RADIO_URL + '?v=' + L()[idx].yt, width: 200, height: 200, allow: 'autoplay; encrypted-media', style: 'border:0', title: 'Kevins Radio' });
+        dock.querySelector('#yt-frame').replaceWith(fr);
+        let vt = ''; const post = (o) => { try { fr.contentWindow.postMessage(o, '*'); } catch (e) { } };
+        player = { setVolume: (v) => post({ mxc: 'vol', v }), playVideo: () => post({ mxc: 'play' }), pauseVideo: () => post({ mxc: 'pause' }), loadVideoById: (id) => post({ mxc: 'load', id }), getVideoData: () => ({ title: vt }) };
+        window.addEventListener('message', (e) => { if (e.source !== fr.contentWindow) return; const d = e.data || {}; if (!d.mx) return;
+          if (d.ev === 'ready') H.onReady(); else if (d.ev === 'state') { if (d.title) vt = d.title; H.onStateChange({ data: d.data }); } else if (d.ev === 'error') H.onError({ data: d.data }); });
+        setTimeout(() => { if (!ready) radioReport('Radio-Seite lädt nicht (kein Internet oder github.io gesperrt)'); }, 20000);
+        return;
+      }
       window.onYouTubeIframeAPIReady = () => {
-        const fi = L().findIndex((m) => m.first && !bad()[m.yt]); idx = fi >= 0 ? fi : draw();
         player = new YT.Player('yt-frame', { width: 200, height: 200, videoId: L()[idx].yt,
           playerVars: { playsinline: 1, controls: 0, rel: 0, modestbranding: 1, origin: location.origin, widget_referrer: 'https://michaeliskevin1-code.github.io/' },
-          events: {
-            onReady: () => { ready = true; player.setVolume(vol()); title(); if (want) player.playVideo(); },
-            onStateChange: (e) => { if (e.data === 0) next(); if (e.data === 1) { failed = 0; title(); } },
-            onError: (e) => { try { const id = L()[idx].yt; state.musicBad = Object.assign({}, state.musicBad, { [id]: (e && e.data) || 1 }); save(); } catch (er) { } if (++failed < L().length) next(); else hide(); }
-          } });
+          events: H });
       };
       const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); if (state.settings.menuMusic && musicHere) fab.hidden = false; }; document.head.append(sc);
     }
+    let radioRep = 0;
+    function radioReport(msg) { if (radioRep++ > 3) return; try { sendReport('📻 Radio', msg + ' · Version ' + (window.__APP_VERSION || 'Web'), 1); } catch (e) { } }
     function title() { const t = dock.querySelector('.yt-t'); if (!t || !L()[idx]) return; let n = L()[idx].t; try { const d = player && player.getVideoData && player.getVideoData(); if (d && d.title) n = d.title; } catch (e) { } t.textContent = '📻 ' + (n || 'Kevins Radio'); }
     function next() { if (!ready) return; idx = draw(); player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
     function show() { musicHere = true; if (!state.settings.menuMusic || VIEWER || !L().length) return; if (!fab.isConnected) document.body.append(fab); if (state.settings.radioOpen !== false) openDock(); else { fab.hidden = false; dock.hidden = true; } }
@@ -3377,6 +3397,7 @@ ${mouth}</svg>`;
   }
 
   // Einmalig (Kevins Wunsch 22.11.): Mathe bis 20 gilt als gekonnt → Start bei Zahlen 20–100. Nur Mathe, Rest bleibt.
+  (function radioReset() { state.migr = state.migr || {}; if (state.migr.radio3) return; state.musicBad = {}; state.migr.radio3 = 1; save(); })();
   (function radioDefaults() { state.migr = state.migr || {}; if (state.migr.radio2) return; if (!state.settings.menuVol || state.settings.menuVol === 12) state.settings.menuVol = 9; delete state.settings.radioOpen; state.migr.radio2 = 1; save(); })();
   (function mathTo100() {
     if (VIEWER) return; state.migr = state.migr || {}; if (state.migr.math100) return;
