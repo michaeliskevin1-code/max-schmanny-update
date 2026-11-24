@@ -946,8 +946,8 @@ ${mouth}</svg>`;
       h('div', { class: 'yt-bar' }, h('span', { class: 'yt-t' }, '📻 Kevins Radio'), h('button', { class: 'yt-b', 'aria-label': 'Nächstes Lied', onclick: () => next() }, '⏭'), h('button', { class: 'yt-b', 'aria-label': 'Radio klein machen', onclick: () => { state.settings.radioOpen = false; save(); closeDock(); } }, '▾')));
     // Klein: nur ein runder Radio-Knopf unten rechts. Musik läuft nur, solange das Fenster offen ist (YouTube-Regel: Player muss sichtbar sein).
     const fab = h('button', { class: 'yt-fab', hidden: true, 'aria-label': 'Kevins Radio anmachen', onclick: () => { SFX.tap(); state.settings.radioOpen = true; save(); openDock(); } }, '📻');
-    function openDock() { want = true; fab.hidden = true; load(); dock.hidden = false; if (ready && !held) { player.setVolume(vol()); player.playVideo(); } }
-    function closeDock() { want = false; dock.hidden = true; if (ready) player.pauseVideo(); if (state.settings.menuMusic && onHome) fab.hidden = false; }
+    function openDock() { want = true; fab.hidden = true; document.body.classList.add('radio-on'); load(); dock.hidden = false; if (ready && !held) { player.setVolume(vol()); player.playVideo(); } }
+    function closeDock() { want = false; dock.hidden = true; document.body.classList.remove('radio-on'); if (ready) player.pauseVideo(); if (state.settings.menuMusic && musicHere) fab.hidden = false; }
     const L = () => D.MUSIC || [];
     const vol = () => Math.round((state.settings.menuVol || 9) * (ducked ? 0.35 : 1));
     function load() {
@@ -963,15 +963,15 @@ ${mouth}</svg>`;
             onError: (e) => { try { const id = L()[idx].yt; state.musicBad = Object.assign({}, state.musicBad, { [id]: (e && e.data) || 1 }); save(); } catch (er) { } if (++failed < L().length) next(); else hide(); }
           } });
       };
-      const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); if (state.settings.menuMusic && onHome) fab.hidden = false; }; document.head.append(sc);
+      const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); if (state.settings.menuMusic && musicHere) fab.hidden = false; }; document.head.append(sc);
     }
     function title() { const t = dock.querySelector('.yt-t'); if (!t || !L()[idx]) return; let n = L()[idx].t; try { const d = player && player.getVideoData && player.getVideoData(); if (d && d.title) n = d.title; } catch (e) { } t.textContent = '📻 ' + (n || 'Kevins Radio'); }
     function next() { if (!ready) return; idx = draw(); player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
-    function show() { if (!state.settings.menuMusic || VIEWER || !L().length) return; if (!fab.isConnected) document.body.append(fab); if (state.settings.radioOpen !== false) openDock(); else { fab.hidden = false; dock.hidden = true; } }
-    function hide() { want = false; dock.hidden = true; fab.hidden = true; if (ready) player.pauseVideo(); }
+    function show() { musicHere = true; if (!state.settings.menuMusic || VIEWER || !L().length) return; if (!fab.isConnected) document.body.append(fab); if (state.settings.radioOpen !== false) openDock(); else { fab.hidden = false; dock.hidden = true; } }
+    function hide() { musicHere = false; want = false; dock.hidden = true; document.body.classList.remove('radio-on'); fab.hidden = true; if (ready) player.pauseVideo(); }
     function duck(on) { ducked = on; if (ready && want) player.setVolume(vol()); }
     // Tanz-Beat läuft: Radio kurz anhalten, danach weiter
-    let held = false;
+    let held = false, musicHere = false;
     function hold(on) { held = on; if (!ready || !want) return; if (on) player.pauseVideo(); else { player.setVolume(vol()); player.playVideo(); } }
     // Fenster verschieben (an der Leiste ziehen), damit es keine Knöpfe verdeckt
     (() => { const bar = dock.querySelector('.yt-bar'); let sx = 0, sy = 0, ox = 0, oy = 0, drag = false;
@@ -1699,7 +1699,7 @@ ${mouth}</svg>`;
     const wrap = h('div', { class: 'wpad' + (opts.lines === false ? ' plain' : '') });
     const cv = h('canvas', { class: 'wcanvas', 'aria-label': 'Schreibfeld für den Stift' });
     wrap.append(cv);
-    let ctx = null, drawing = false, last = null, strokes = 0, penSeen = false, W = 300;
+    let ctx = null, drawing = false, last = null, strokes = 0, penSeen = false, W = 300, hist = [];
     const dpr = Math.max(1, window.devicePixelRatio || 1); const H = opts.height || 190; const LW = opts.width || 7;
     function lines() {
       if (opts.lines === false) return;
@@ -1720,13 +1720,15 @@ ${mouth}</svg>`;
     cv.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'pen') penSeen = true;
       if (penSeen && e.pointerType === 'touch') return; // Handballen ignorieren, wenn ein Stift benutzt wird
+      if (drawing) return; // zweiter Finger/Handballen: nicht als neuer Strich zählen
       e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) { }
+      try { hist.push(ctx.getImageData(0, 0, cv.width, cv.height)); if (hist.length > 30) hist.shift(); } catch (er) { }
       drawing = true; last = pos(e); ctx.beginPath(); ctx.arc(last[0], last[1], LW / 2, 0, 7); ctx.fill(); strokes++;
     });
     cv.addEventListener('pointermove', (e) => { if (!drawing) return; e.preventDefault(); const p = pos(e); ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); last = p; });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => cv.addEventListener(ev, () => { drawing = false; }));
     requestAnimationFrame(size);
-    return { el: wrap, clear() { strokes = 0; size(); }, get empty() { return strokes === 0; }, dataURL() { return cv.toDataURL('image/png'); } };
+    return { el: wrap, clear() { strokes = 0; hist = []; size(); }, undo() { const u = hist.pop(); if (u) { ctx.putImageData(u, 0, 0); strokes = Math.max(0, strokes - 1); } SFX.tap(); }, get empty() { return strokes === 0; }, dataURL() { return cv.toDataURL('image/png'); } };
   }
   function compareStep(ui, modelEl, audio) {
     ui.prompt('Vergleiche! Ist es gleich? Zeig es auch Mama!', 'p:vergleich');
@@ -1751,9 +1753,9 @@ ${mouth}</svg>`;
       const M = writeModel(t); const pad = writePad({ height: 190 });
       ui.prompt('Schreib es mit dem Stift ab!', 'p:abschreiben');
       ui.stage.append(M.el, pad.el);
-      ui.answers.className = 'answers two';
+      ui.answers.className = 'answers three';
       ui.answers.replaceChildren(
-        h('button', { class: 'tile ans', onclick: () => pad.clear() }, '↺ Löschen'),
+        h('button', { class: 'tile ans', onclick: () => pad.undo() }, '↶ Zurück'), h('button', { class: 'tile ans', onclick: () => pad.clear() }, '↺ Alles weg'),
         h('button', { class: 'tile go', id: 'write-done', onclick: () => { if (!pad.empty) compareStep(ui, M.el, M.audio); } }, '✓ Fertig'));
       ui.feedback = (ok) => ({ title: ok ? 'Schön geschrieben! Max staunt.' : 'Gut, dass du genau hinschaust. Das üben wir gleich nochmal.', voice: [M.audio] });
       ui.fastMs = 60000;
@@ -1771,9 +1773,9 @@ ${mouth}</svg>`;
         if (went) return; went = true; M.el.hidden = true; bar.remove();
         ui.prompt('Jetzt schreib es aus dem Kopf!', 'p:abschreiben');
         ui.stage.append(pad.el);
-        ui.answers.className = 'answers two';
+        ui.answers.className = 'answers three';
         ui.answers.replaceChildren(
-          h('button', { class: 'tile ans', onclick: () => pad.clear() }, '↺ Löschen'),
+          h('button', { class: 'tile ans', onclick: () => pad.undo() }, '↶ Zurück'), h('button', { class: 'tile ans', onclick: () => pad.clear() }, '↺ Alles weg'),
           h('button', { class: 'tile go', id: 'write-done', onclick: () => { if (!pad.empty) { M.el.remove(); ui.stage.prepend(M.el); compareStep(ui, M.el, M.audio); } } }, '✓ Fertig'));
       };
       setTimeout(go, 5000);
@@ -1971,7 +1973,7 @@ ${mouth}</svg>`;
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showDances()), h('h1', { class: 'h-display' }, 'Neuer Tanz')),
       h('p', { class: 'note' }, 'Mal deinen Tanz! Tipp unten auf Sachen, dann kommen sie ins Bild. Mit dem Finger kannst du sie verschieben.'),
       stage, tools, palette,
-      h('button', { class: 'p-btn', onclick: () => { pad.clear(); items.forEach((x) => x.el.remove()); items.length = 0; select(null); } }, '↺ Alles neu'),
+      h('div', { class: 'row-btns' }, h('button', { class: 'p-btn', onclick: () => pad.undo() }, '↶ Zurück'), h('button', { class: 'p-btn', onclick: () => { pad.clear(); items.forEach((x) => x.el.remove()); items.length = 0; select(null); } }, '↺ Alles neu')),
       nameEl, row(D.DANCE_A, (w) => { a = w; }), row(D.DANCE_B, (w) => { b = w; }),
       h('button', { class: 'tile go', id: 'dance-save', onclick: async () => {
         if ((pad.empty && !items.length) || !a || !b) { toast('Mal deinen Tanz und such einen Namen aus!', '✏️'); return; }
@@ -2515,9 +2517,9 @@ ${mouth}</svg>`;
       const pad = writePad({ height: 190 });
       ui.prompt(D.PROMPTS4['p2:diks'], 'p2:diks');
       ui.stage.append(h('div', { class: 'pic small' }, W.e), iconBtn('Nochmal hören', '🔊', () => Voice.say([aud]), 'mini-speak'), model, pad.el);
-      ui.answers.className = 'answers two';
+      ui.answers.className = 'answers three';
       ui.answers.replaceChildren(
-        h('button', { class: 'tile ans', onclick: () => pad.clear() }, '↺ Löschen'),
+        h('button', { class: 'tile ans', onclick: () => pad.undo() }, '↶ Zurück'), h('button', { class: 'tile ans', onclick: () => pad.clear() }, '↺ Alles weg'),
         h('button', { class: 'tile go', id: 'write-done', onclick: () => { if (!pad.empty) compareStep(ui, model, aud); } }, '✓ Fertig'));
       ui.feedback = (ok) => ({ title: ok ? 'Selbst geschrieben! Stark!' : 'Gut, dass du genau vergleichst. Das üben wir nochmal.', voice: [aud] });
       ui.fastMs = 60000;
@@ -3074,7 +3076,7 @@ ${mouth}</svg>`;
       ctx.restore();
     }
     function putStamp(p) { const S = STAMPS.find((x) => x.id === stamp); const im = stampImgs[stamp]; if (!S || !im || !im.complete) return; const w = 34 + size * 5, r = (im.naturalHeight || 1) / (im.naturalWidth || 1); ctx.drawImage(im, p[0] - w / 2, p[1] - (w * r) / 2, w, w * r); SFX.tap(); }
-    dC.addEventListener('pointerdown', (e) => { e.preventDefault(); try { dC.setPointerCapture(e.pointerId); } catch (er) { } pushUndo(); empty = false; const p = pos(e); if (tool === 'stamp') { putStamp(p); return; } drawing = true; last = p; seg(p, [p[0] + 0.1, p[1] + 0.1]); });
+    dC.addEventListener('pointerdown', (e) => { if (drawing) return; e.preventDefault(); try { dC.setPointerCapture(e.pointerId); } catch (er) { } pushUndo(); empty = false; const p = pos(e); if (tool === 'stamp') { putStamp(p); return; } drawing = true; last = p; seg(p, [p[0] + 0.1, p[1] + 0.1]); });
     dC.addEventListener('pointermove', (e) => { if (!drawing) return; e.preventDefault(); const p = pos(e); seg(last, p); last = p; });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => dC.addEventListener(ev, () => { drawing = false; }));
     function exportImg() { const out = document.createElement('canvas'); const ow = 900, oh = Math.round(900 * H / W); out.width = ow; out.height = oh; const c = out.getContext('2d'); c.drawImage(bgC, 0, 0, ow, oh); c.drawImage(dC, 0, 0, ow, oh); return out.toDataURL('image/jpeg', 0.78); }
@@ -3093,8 +3095,8 @@ ${mouth}</svg>`;
       h('button', { class: 'tile go', id: 'st-send', onclick: async (e) => { if (empty) { toast('Mal erst etwas!', '🖌️'); return; } const img = exportImg(); galleryAdd(img, 'An Kevin geschickt'); e.target.disabled = true; const r = await sendPicture(img); e.target.disabled = false; SFX.fanfare(); toast(r === 'ok' ? 'Kevin bekommt dein Bild! 💌' : r === 'aus' ? 'Gespeichert! (Schicken ist ausgeschaltet)' : 'Gespeichert! Es wird geschickt, sobald Internet da ist.', '💌'); } }, '💌 An Kevin schicken'));
     const scr = h('main', { class: 'screen map studio' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Malstudio')),
-      studioTabs('frei'), h('div', { class: 'studio-body' }, stage, h('div', { class: 'studio-side' }, h('div', { class: 'st-panel' }, toolsRow, colors, sizes), stampRow, bgRow, actions)));
-    mount(scr, 'home');
+      studioTabs('frei'), h('div', { class: 'studio-body' }, stage, h('div', { class: 'studio-side' }, actions, h('div', { class: 'st-panel' }, toolsRow, colors, sizes), stampRow, bgRow)));
+    mount(scr, 'home'); MenuMusic.show();
     requestAnimationFrame(sizeUp);
   }
 
@@ -3136,7 +3138,7 @@ ${mouth}</svg>`;
       studioTabs('zahlen'),
       h('p', { class: 'note' }, `Jede Farbe hat eine Zahl. Rechne die Aufgabe im Feld aus und male es mit der passenden Farbe an! Deine Aufgaben: ${sk.n}.`),
       h('div', { class: 'mz-list' }, MZ_PICS.map((P) => h('button', { class: 'mz-card', onclick: () => { SFX.tap(); showMz(P); } }, svgEl(mzSvg(P, null, true), 'mz-thumb'), h('span', null, P.n + ((state.mz && state.mz.pics || {})[P.id] ? ' ✓' : ''))))));
-    mount(scr, 'home');
+    mount(scr, 'home'); MenuMusic.show();
   }
   function mzSvg(P, fills, thumb) {
     const parts = P.parts.map((p, i) => { const [tag, at] = p; const attrs = Object.entries(at).map(([k, v]) => `${k}="${v}"`).join(' '); const f = thumb ? P.cols[p[2]] : (fills && fills[i]) || '#ffffff'; return `<${tag} ${attrs} data-i="${i}" fill="${f}" stroke="#46546b" stroke-width="2" class="mz-part"/>`; }).join('');
@@ -3186,7 +3188,7 @@ ${mouth}</svg>`;
     const scr = h('main', { class: 'screen map studio' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showMzList()), h('h1', { class: 'h-display' }, '🔢 ' + P.n)),
       h('div', { class: 'mz-wrap' }, wrap, h('div', { class: 'mz-side' }, say, palette)));
-    mount(scr, 'home'); render();
+    mount(scr, 'home'); MenuMusic.show(); render();
   }
 
   // ----- Galerie -----
@@ -3206,7 +3208,7 @@ ${mouth}</svg>`;
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Malstudio')),
       studioTabs('galerie'),
       G.length ? h('div', { class: 'gallery' }, G.map((g, i) => h('button', { class: 'gal-item', onclick: () => big(g, i) }, h('img', { src: g.img, alt: 'Bild' }), h('span', null, when(g.at))))) : h('p', { class: 'note' }, 'Noch keine Bilder. Mal etwas und tipp auf „Speichern“!'));
-    mount(scr, 'home');
+    mount(scr, 'home'); MenuMusic.show();
   }
 
   // ---------- Foto-Rätsel: verschwommenes Foto, jede richtig eingetippte Rechnung macht es schärfer ----------
@@ -3346,7 +3348,7 @@ ${mouth}</svg>`;
     }
     const pos = (e) => { const r = dC.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     const seg = (a, b) => { ctx.strokeStyle = color; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); };
-    dC.addEventListener('pointerdown', (e) => { e.preventDefault(); try { dC.setPointerCapture(e.pointerId); } catch (er) { } try { undo.push(ctx.getImageData(0, 0, dC.width, dC.height)); if (undo.length > 30) undo.shift(); } catch (er) { } empty = false; drawing = true; last = pos(e); seg(last, [last[0] + 0.1, last[1] + 0.1]); });
+    dC.addEventListener('pointerdown', (e) => { if (drawing) return; e.preventDefault(); try { dC.setPointerCapture(e.pointerId); } catch (er) { } try { undo.push(ctx.getImageData(0, 0, dC.width, dC.height)); if (undo.length > 30) undo.shift(); } catch (er) { } empty = false; drawing = true; last = pos(e); seg(last, [last[0] + 0.1, last[1] + 0.1]); });
     dC.addEventListener('pointermove', (e) => { if (!drawing) return; e.preventDefault(); const p = pos(e); seg(last, p); last = p; });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => dC.addEventListener(ev, () => { drawing = false; }));
     const exportImg = () => { const out = document.createElement('canvas'); out.width = 700; out.height = Math.round(700 * H / W); const c = out.getContext('2d'); c.drawImage(bgC, 0, 0, out.width, out.height); c.drawImage(dC, 0, 0, out.width, out.height); return out.toDataURL('image/jpeg', 0.7); };

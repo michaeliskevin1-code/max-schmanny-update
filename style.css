@@ -744,3 +744,9 @@ button { font: inherit; color: inherit; }
 .yt-fab[hidden] { display: none; }
 .yt-dock { width: 208px; padding: 4px 4px 4px; border-radius: 20px; }
 .yt-dock::before, .yt-dock::after { display: none; }
+.answers.three { grid-template-columns: 1fr 1fr 1.3fr; }
+.answers.three .ans { font-size: clamp(16px, 4vw, 24px); }
+.row-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+/* Radio-Fenster offen: unten Platz lassen, damit nichts dauerhaft verdeckt ist */
+body.radio-on .screen { padding-bottom: 260px; }
+body.radio-on .studio-side { padding-bottom: 250px; }
