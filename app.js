@@ -824,10 +824,9 @@ ${mouth}</svg>`;
 
   // ---------- Bildschirme ----------
   function mount(screen, bg) {
-    onHome = false; Voice.stop(); try { Mic.stop(); } catch (e) { } if (typeof Beat !== 'undefined') Beat.stop();
+    onHome = false; try { MenuMusic.hide(); } catch (e) { } Voice.stop(); try { Mic.stop(); } catch (e) { } if (typeof Beat !== 'undefined') Beat.stop();
     document.body.className = 'bg-' + (bg || 'home');
     app.replaceChildren(screen);
-    try { MenuMusic.show(); } catch (e) { }
     try { state.where = whereLabel(screen.className || ''); state.whereAt = Date.now(); save(); } catch (e) { }
     window.scrollTo(0, 0);
   }
@@ -948,7 +947,7 @@ ${mouth}</svg>`;
     // Klein: nur ein runder Radio-Knopf unten rechts. Musik läuft nur, solange das Fenster offen ist (YouTube-Regel: Player muss sichtbar sein).
     const fab = h('button', { class: 'yt-fab', hidden: true, 'aria-label': 'Kevins Radio anmachen', onclick: () => { SFX.tap(); state.settings.radioOpen = true; save(); openDock(); } }, '📻');
     function openDock() { want = true; fab.hidden = true; load(); dock.hidden = false; if (ready && !held) { player.setVolume(vol()); player.playVideo(); } }
-    function closeDock() { want = false; dock.hidden = true; if (ready) player.pauseVideo(); if (state.settings.menuMusic) fab.hidden = false; }
+    function closeDock() { want = false; dock.hidden = true; if (ready) player.pauseVideo(); if (state.settings.menuMusic && onHome) fab.hidden = false; }
     const L = () => D.MUSIC || [];
     const vol = () => Math.round((state.settings.menuVol || 9) * (ducked ? 0.35 : 1));
     function load() {
@@ -964,7 +963,7 @@ ${mouth}</svg>`;
             onError: (e) => { try { const id = L()[idx].yt; state.musicBad = Object.assign({}, state.musicBad, { [id]: (e && e.data) || 1 }); save(); } catch (er) { } if (++failed < L().length) next(); else hide(); }
           } });
       };
-      const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); if (state.settings.menuMusic) fab.hidden = false; }; document.head.append(sc);
+      const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); if (state.settings.menuMusic && onHome) fab.hidden = false; }; document.head.append(sc);
     }
     function title() { const t = dock.querySelector('.yt-t'); if (!t || !L()[idx]) return; let n = L()[idx].t; try { const d = player && player.getVideoData && player.getVideoData(); if (d && d.title) n = d.title; } catch (e) { } t.textContent = '📻 ' + (n || 'Kevins Radio'); }
     function next() { if (!ready) return; idx = draw(); player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
