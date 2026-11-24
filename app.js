@@ -3390,6 +3390,42 @@ ${mouth}</svg>`;
     if (n) setTimeout(() => sendReport('Mathe umgestellt 🧮', 'Alles bis 20 gilt jetzt als gekonnt (wird nur noch ab und zu wiederholt). Neue Aufgaben ab Zehner-Zahlen, dann Plus/Minus bis 100.', 2), 5000);
   })();
 
+  // Updates auch während die App läuft holen (beim Zurückkommen + alle 20 Min.) und auf der Startseite still neu laden.
+  // boot.js (in der APK) liest dieselbe IndexedDB 'max-update' beim Start.
+  if (NATIVE) {
+    const REM = 'https://raw.githubusercontent.com/michaeliskevin1-code/max-schmanny-update/main/', UFILES = ['style.css', 'data.js', 'voices.js', 'app.js'];
+    const idb = () => new Promise((res, rej) => { const r = indexedDB.open('max-update', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    const iget = async (k) => { const d = await idb(); return new Promise((res) => { const q = d.transaction('f').objectStore('f').get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); };
+    const iput = async (k, v) => { const d = await idb(); return new Promise((res, rej) => { const t = d.transaction('f', 'readwrite'); t.objectStore('f').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); };
+    let busy = false, lastTouch = Date.now();
+    document.addEventListener('pointerdown', () => { lastTouch = Date.now(); }, true);
+    const updCheck = async () => {
+      if (busy || window.__UPDATE_READY) return; busy = true;
+      try {
+        const r = await fetch(REM + 'version.json?t=' + Date.now(), { cache: 'no-store' });
+        if (r.ok) {
+          const j = await r.json(); const meta = (await iget('meta')) || { v: 0 };
+          const cur = Math.max(window.__BUILT_VERSION || 0, +window.__APP_VERSION || 0, meta.v || 0);
+          if (j.v > cur && meta.bad !== j.v) {
+            for (const f of UFILES) {
+              if ((await iget('hash:' + f)) === j.h[f] && (await iget('file:' + f)) != null) continue;
+              const t = await (await fetch(REM + f + '?v=' + j.v, { cache: 'no-store' })).text();
+              await iput('file:' + f, t); await iput('hash:' + f, j.h[f]);
+            }
+            await iput('meta', { v: j.v }); window.__UPDATE_READY = j.v;
+          }
+        }
+      } catch (e) { }
+      busy = false;
+    };
+    setTimeout(updCheck, 15000); setInterval(updCheck, 20 * 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) updCheck(); });
+    setInterval(() => {
+      const ready = window.__UPDATE_READY; if (!ready || +ready <= (+window.__APP_VERSION || 0)) return;
+      if (onHome && !document.hidden && !document.querySelector('.overlay, .tour, .explain') && Date.now() - lastTouch > 6000) { try { save(); } catch (e) { } location.reload(); }
+    }, 3000);
+  }
+
   // ---------- Start ----------
   window.__maxApp = {
     get state() { return state; }, setState(s) { state = Object.assign(defaults(), s); save(); }, skillStars, stageUnlocked, skillUnlocked, MSK, newRead, newMath, buildSession, graphemes,
