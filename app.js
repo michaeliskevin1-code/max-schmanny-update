@@ -43,7 +43,7 @@
   function defaults() {
     return {
       v: 1, name: '', cat: 'bkh', catV: 2, ruName: '', tests: { lastAt: 0, list: [] },
-      settings: { perDay: 2, perSession: 8, tts: false, sfx: true, dance: true, mal: false, write: true, music: true, menuMusic: true, menuVol: 12 },
+      settings: { perDay: 2, perSession: 8, tts: false, sfx: true, dance: true, mal: false, write: true, music: true, menuMusic: true, menuVol: 9 },
       items: {}, days: {}, extra: { day: -1, n: 0 },
       story: { unlocked: 0, lastDay: -1, read: {} },
       stickers: { owned: [], worn: {}, seen: 0 },
@@ -824,9 +824,10 @@ ${mouth}</svg>`;
 
   // ---------- Bildschirme ----------
   function mount(screen, bg) {
-    onHome = false; try { MenuMusic.hide(); } catch (e) { } Voice.stop(); try { Mic.stop(); } catch (e) { } if (typeof Beat !== 'undefined') Beat.stop();
+    onHome = false; Voice.stop(); try { Mic.stop(); } catch (e) { } if (typeof Beat !== 'undefined') Beat.stop();
     document.body.className = 'bg-' + (bg || 'home');
     app.replaceChildren(screen);
+    try { MenuMusic.show(); } catch (e) { }
     try { state.where = whereLabel(screen.className || ''); state.whereAt = Date.now(); save(); } catch (e) { }
     window.scrollTo(0, 0);
   }
@@ -946,10 +947,10 @@ ${mouth}</svg>`;
       h('div', { class: 'yt-bar' }, h('span', { class: 'yt-t' }, '📻 Kevins Radio'), h('button', { class: 'yt-b', 'aria-label': 'Nächstes Lied', onclick: () => next() }, '⏭'), h('button', { class: 'yt-b', 'aria-label': 'Radio klein machen', onclick: () => { state.settings.radioOpen = false; save(); closeDock(); } }, '▾')));
     // Klein: nur ein runder Radio-Knopf unten rechts. Musik läuft nur, solange das Fenster offen ist (YouTube-Regel: Player muss sichtbar sein).
     const fab = h('button', { class: 'yt-fab', hidden: true, 'aria-label': 'Kevins Radio anmachen', onclick: () => { SFX.tap(); state.settings.radioOpen = true; save(); openDock(); } }, '📻');
-    function openDock() { want = true; fab.hidden = true; load(); dock.hidden = false; if (ready) { player.setVolume(vol()); player.playVideo(); } }
-    function closeDock() { want = false; dock.hidden = true; if (ready) player.pauseVideo(); if (state.settings.menuMusic && onHome) fab.hidden = false; }
+    function openDock() { want = true; fab.hidden = true; load(); dock.hidden = false; if (ready && !held) { player.setVolume(vol()); player.playVideo(); } }
+    function closeDock() { want = false; dock.hidden = true; if (ready) player.pauseVideo(); if (state.settings.menuMusic) fab.hidden = false; }
     const L = () => D.MUSIC || [];
-    const vol = () => Math.round((state.settings.menuVol || 12) * (ducked ? 0.35 : 1));
+    const vol = () => Math.round((state.settings.menuVol || 9) * (ducked ? 0.35 : 1));
     function load() {
       if (loading || VIEWER || !L().length) return; loading = true;
       document.body.append(dock);
@@ -963,14 +964,22 @@ ${mouth}</svg>`;
             onError: (e) => { try { const id = L()[idx].yt; state.musicBad = Object.assign({}, state.musicBad, { [id]: (e && e.data) || 1 }); save(); } catch (er) { } if (++failed < L().length) next(); else hide(); }
           } });
       };
-      const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); if (onHome && state.settings.menuMusic) fab.hidden = false; }; document.head.append(sc);
+      const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { loading = false; dock.remove(); if (state.settings.menuMusic) fab.hidden = false; }; document.head.append(sc);
     }
     function title() { const t = dock.querySelector('.yt-t'); if (!t || !L()[idx]) return; let n = L()[idx].t; try { const d = player && player.getVideoData && player.getVideoData(); if (d && d.title) n = d.title; } catch (e) { } t.textContent = '📻 ' + (n || 'Kevins Radio'); }
     function next() { if (!ready) return; idx = draw(); player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
-    function show() { if (!state.settings.menuMusic || VIEWER || !L().length) return; if (!fab.isConnected) document.body.append(fab); if (state.settings.radioOpen) openDock(); else { fab.hidden = false; dock.hidden = true; } }
+    function show() { if (!state.settings.menuMusic || VIEWER || !L().length) return; if (!fab.isConnected) document.body.append(fab); if (state.settings.radioOpen !== false) openDock(); else { fab.hidden = false; dock.hidden = true; } }
     function hide() { want = false; dock.hidden = true; fab.hidden = true; if (ready) player.pauseVideo(); }
     function duck(on) { ducked = on; if (ready && want) player.setVolume(vol()); }
-    return { show, hide, duck, setVol() { if (ready) player.setVolume(vol()); } };
+    // Tanz-Beat läuft: Radio kurz anhalten, danach weiter
+    let held = false;
+    function hold(on) { held = on; if (!ready || !want) return; if (on) player.pauseVideo(); else { player.setVolume(vol()); player.playVideo(); } }
+    // Fenster verschieben (an der Leiste ziehen), damit es keine Knöpfe verdeckt
+    (() => { const bar = dock.querySelector('.yt-bar'); let sx = 0, sy = 0, ox = 0, oy = 0, drag = false;
+      bar.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; drag = true; const r = dock.getBoundingClientRect(); sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top; try { bar.setPointerCapture(e.pointerId); } catch (er) { } });
+      bar.addEventListener('pointermove', (e) => { if (!drag) return; const x = Math.max(0, Math.min(innerWidth - dock.offsetWidth, ox + e.clientX - sx)), y = Math.max(0, Math.min(innerHeight - dock.offsetHeight, oy + e.clientY - sy)); Object.assign(dock.style, { left: x + 'px', top: y + 'px', right: 'auto', bottom: 'auto' }); });
+      ['pointerup', 'pointercancel'].forEach((ev) => bar.addEventListener(ev, () => { drag = false; })); })();
+    return { show, hide, duck, hold, setVol() { if (ready) player.setVolume(vol()); } };
   })();
   // Erklär-Fenster beim ersten Öffnen eines Bereichs (Kevins Stimme, sonst ausnahmsweise Gerätestimme)
   function explain(key, then) {
@@ -1835,8 +1844,8 @@ ${mouth}</svg>`;
       }
     }
     return {
-      start() { if (!state.settings.music || !state.settings.sfx) return; const x = SFX.ctx(); if (!x) return; step = 0; next = x.currentTime + 0.05; clearInterval(timer); timer = setInterval(tick, 50); },
-      stop() { clearInterval(timer); timer = null; }
+      start() { if (!state.settings.music || !state.settings.sfx) return; const x = SFX.ctx(); if (!x) return; try { MenuMusic.hold(true); } catch (e) { } step = 0; next = x.currentTime + 0.05; clearInterval(timer); timer = setInterval(tick, 50); },
+      stop() { if (timer) { try { MenuMusic.hold(false); } catch (e) { } } clearInterval(timer); timer = null; }
     };
   })();
   // Text mit russischen Stellen: russische Teile mit russischer Stimme lesen
@@ -2843,7 +2852,7 @@ ${mouth}</svg>`;
         toggle('tts', 'Gerätestimme liest vor, solange noch keine eigene Aufnahme da ist'),
         toggle('sfx', 'Klick- und Jubel-Töne'),
         h('label', { class: 'p-toggle' }, h('input', { type: 'checkbox', id: 'set-menumusic', checked: state.settings.menuMusic ? true : null, onchange: (e) => { state.settings.menuMusic = e.target.checked; save(); } }), 'Kevins Musik leise im Menü (braucht Internet)'),
-        h('div', { class: 'p-seg' }, h('span', { class: 'lbl' }, 'Lautstärke Musik'), h('div', { class: 'seg' }, [['Sehr leise', 6], ['Leise', 12], ['Mittel', 25], ['Laut', 45]].map(([n, v]) => h('button', { class: 'seg-b' + ((state.settings.menuVol || 12) === v ? ' on' : ''), onclick: () => { state.settings.menuVol = v; save(); MenuMusic.setVol(); showParents('set'); } }, n)))),
+        h('div', { class: 'p-seg' }, h('span', { class: 'lbl' }, 'Lautstärke Musik'), h('div', { class: 'seg' }, [['Sehr leise', 5], ['Leise', 9], ['Mittel', 18], ['Laut', 35]].map(([n, v]) => h('button', { class: 'seg-b' + ((state.settings.menuVol || 12) === v ? ' on' : ''), onclick: () => { state.settings.menuVol = v; save(); MenuMusic.setVol(); showParents('set'); } }, n)))),
         h('button', { class: 'tile', onclick: () => Voice.say([{ text: `Hallo ${state.name}! So klingt die Gerätestimme.` }]) }, 'Gerätestimme testen')));
   }
   // Direkte Aufnahme (nur in der Android-App; im Artefakt ist das Mikrofon gesperrt)
@@ -3367,6 +3376,7 @@ ${mouth}</svg>`;
   }
 
   // Einmalig (Kevins Wunsch 22.11.): Mathe bis 20 gilt als gekonnt → Start bei Zahlen 20–100. Nur Mathe, Rest bleibt.
+  (function radioDefaults() { state.migr = state.migr || {}; if (state.migr.radio2) return; if (!state.settings.menuVol || state.settings.menuVol === 12) state.settings.menuVol = 9; delete state.settings.radioOpen; state.migr.radio2 = 1; save(); })();
   (function mathTo100() {
     if (VIEWER) return; state.migr = state.migr || {}; if (state.migr.math100) return;
     const today = dayNum(); let n = 0;
