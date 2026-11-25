@@ -3426,6 +3426,19 @@ ${mouth}</svg>`;
   // Einmalig (Kevins Wunsch 22.11.): Mathe bis 20 gilt als gekonnt → Start bei Zahlen 20–100. Nur Mathe, Rest bleibt.
   (function radioReset() { state.migr = state.migr || {}; if (state.migr.radio3) return; state.musicBad = {}; state.migr.radio3 = 1; save(); })();
   (function radioDefaults() { state.migr = state.migr || {}; if (state.migr.radio2) return; if (!state.settings.menuVol || state.settings.menuVol === 12) state.settings.menuVol = 9; delete state.settings.radioOpen; state.migr.radio2 = 1; save(); })();
+  // 25.11.: Schultest zeigt: Zehnerübergang (8+8, 8+9) und Zahlen bis 100 sitzen NICHT -> Umstellung auf 20–100 zurücknehmen.
+  // Bis 10: bald wieder prüfen (Kasten 1); über die 10 und alles darüber: wieder neu lernen (Kasten 0).
+  (function mathBack() {
+    if (VIEWER) return; state.migr = state.migr || {}; if (state.migr.mathBack) return;
+    const today = dayNum();
+    MSK.filter((x) => x.track === 'pm').forEach((sk) => {
+      const low = sk.k === 'p10' || sk.k === 'm10' || sk.k === 'p20o' || sk.k === 'm20o';
+      sk.ids.forEach((id) => { const it = state.items[id]; if (!it) return; if (low) { it.b = Math.min(it.b || 0, 1); it.d = today; } else delete state.items[id]; });
+      if (!low && state.checks[sk.k]) delete state.checks[sk.k];
+    });
+    state.migr.math100 = state.migr.math100 || 1; state.migr.mathBack = Date.now(); save();
+    setTimeout(() => sendReport('Mathe zurückgestellt 🧮', 'Neu üben: Plus/Minus über die 10 (z. B. 8+8, 8+9, 15−7). Bis 20 ohne Übergang wird kurz neu geprüft. Zahlen bis 100 erst danach.', 2), 6000);
+  })();
   (function mathTo100() {
     if (VIEWER) return; state.migr = state.migr || {}; if (state.migr.math100) return;
     const today = dayNum(); let n = 0;
