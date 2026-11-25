@@ -535,7 +535,7 @@ ${mouth}</svg>`;
       s.r++;
       if (S && S.wrongSet.has(id)) { s.b = 1; s.d = today + 1; }
       else if (info.helped) { s.b = Math.max(1, s.b); s.d = today + 1; }
-      else if (wasNew && info.fast && poolOf(id) === 'math') { s.b = 3; s.d = today + 3; }
+      else if (wasNew && info.fast && poolOf(id) === 'math' && !SKILL_OF[id] && !/^(zp|zer|ana|erg|erh):/.test(id)) { s.b = 3; s.d = today + 3; }
       else if (wasNew) { s.b = 2; s.d = today + 1; }
       else if (s.d > today) { /* Extra-Übung, nicht fällig: Kasten bleibt */ }
       else { s.b = Math.min(6, s.b + 1); s.d = today + INTERVAL[s.b]; }
@@ -550,7 +550,8 @@ ${mouth}</svg>`;
     const sk = SKILL_OF[id];
     const TPC = !sk && !/^(l|s):/.test(id) ? topicOf(id) : null;
     const grp = sk ? sk.k : id.startsWith('l:') ? 'L' : id.startsWith('s:') ? 'S' : TPC ? 'T:' + TPC.k : null;
-    if (wasNew && grp) {
+    // Plus/Minus und die Grundlagen-Übungen ohne schnelle Einstufung (Schultest 25.11.: zu früh hochgestuft)
+    if (wasNew && grp && !(sk && sk.track === 'pm') && !(TPC && ['zp', 'zer', 'ana', 'erg'].includes(TPC.k))) {
       const c = state.checks[grp] || (state.checks[grp] = { n: 0, ok: 0, done: false });
       if (!c.done) {
         c.n++; if (ok && (info.fast || !sk)) c.ok++;
@@ -2288,7 +2289,16 @@ ${mouth}</svg>`;
   const ri = (r, a, b) => a + Math.floor(r() * (b - a + 1));
   const SHAPES = { kreis: 'Kreis', dreieck: 'Dreieck', quadrat: 'Quadrat', rechteck: 'Rechteck' };
   const COINS = [200, 100, 50, 20, 10, 5, 2, 1];
+  // Grundlagen Zehnerübergang (nach Schultest 25.11.)
+  const ZER_IDS = (() => { const o = []; for (let a = 5; a <= 9; a++) for (let b = 11 - a; b <= 9; b++) o.push(`zer:${a}:${b}`); [[48, 6], [57, 8], [86, 7], [38, 5], [27, 6], [69, 4], [45, 7], [76, 8], [34, 9], [59, 3]].forEach(([a, b]) => o.push(`zer:${a}:${b}`)); return o; })();
+  const ANA_IDS = (() => { const o = []; [[8, 2], [7, 3], [6, 4], [5, 5], [9, 1], [3, 4], [5, 2], [6, 3]].forEach(([u, b], i) => { o.push(`ana:p:${2 + (i % 7)}:${u}:${b}`); o.push(`ana:p:${3 + ((i * 3) % 6)}:${u}:${b}`); }); [[10, 2], [10, 3], [9, 4], [8, 5], [10, 6], [7, 3]].forEach(([u, b], i) => o.push(`ana:m:${2 + (i % 7)}:${u}:${b}`)); return [...new Set(o)]; })();
+  const ERG_IDS = [23, 25, 27, 28, 31, 34, 36, 39, 42, 45, 47, 51, 56, 58, 63, 64, 69, 72, 75, 78, 81, 84, 87, 92, 96].map((n) => 'erg:' + n).concat([10, 20, 30, 40, 50, 60, 70, 80, 90].map((t) => 'erh:' + t));
+  const topicFrac = (k) => { const T = TOPICS.find((x) => x.k === k); if (!T) return 0; return T.ids.filter((id) => box(id) >= 2).length / T.ids.length; };
   const TOPICS = [
+    { k: 'zp', pool: 'math', n: 'Zehnerfreunde (… + ? = 10)', gate: () => true, ids: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((a) => 'zp:' + a), kind: 'zehnerfreunde' },
+    { k: 'zer', pool: 'math', n: 'Zehner-Trick (8 + 5 = 8 + 2 + 3)', gate: () => topicFrac('zp') >= 0.6, ids: ZER_IDS, kind: 'zehnertrick' },
+    { k: 'ana', pool: 'math', n: 'Kleine Aufgabe hilft (8 + 2 → 28 + 2)', gate: () => topicFrac('zp') >= 0.6, ids: ANA_IDS, kind: 'analogie' },
+    { k: 'erg', pool: 'math', n: 'Bis zum Zehner ergänzen (25 + ? = 30)', gate: () => topicFrac('zp') >= 0.6, ids: ERG_IDS, kind: 'ergaenzen' },
     { k: 'form', pool: 'math', n: 'Formen', gate: () => true, ids: Object.keys(SHAPES).map((s) => 'form:' + s), kind: 'form' },
     { k: 'vgl', pool: 'math', n: 'Größer, kleiner, gleich', gate: () => doneSk('p10'), ids: GEN(21, 30, (r) => { const a = ri(r, 1, 99); const b = r() < 0.15 ? a : ri(r, Math.max(0, a - 15), Math.min(100, a + 15)); return `vgl:${a}:${b}`; }), kind: 'vergleich' },
     { k: 'dop', pool: 'math', n: 'Verdoppeln und Halbieren', gate: () => doneSk('p10'), ids: [...Array(10)].map((_, i) => 'dop:' + (i + 1)).concat([...Array(10)].map((_, i) => 'hal:' + (2 * (i + 1)))).concat([20, 30, 40, 50].map((n) => 'dop:' + n), [40, 60, 80, 100].map((n) => 'hal:' + n)), kind: 'doppel' },
@@ -2311,8 +2321,9 @@ ${mouth}</svg>`;
     { k: 'vw', pool: 'read', n: 'im oder mir? (genau lesen)', gate: () => stageUnlocked('w'), ids: (D.VERW || []).map((x, i) => 'vw:' + i), kind: 'verwechsel' },
     { k: 'zz', pool: 'read', n: 'Satzzeichen', gate: () => stageUnlocked('t'), ids: D.PUNCT.map((x, i) => 'zz:' + i), kind: 'satzzeichen' }
   ];
-  const TOPIC_BY = {}; TOPICS.forEach((T) => { T.ids.forEach((id) => { TOPIC_BY[id.split(':')[0]] = T; }); });
+  const TOPIC_BY = {}; TOPIC_BY.erh = null; TOPICS.forEach((T) => { T.ids.forEach((id) => { TOPIC_BY[id.split(':')[0]] = T; }); });
   TOPIC_BY.hal = TOPICS.find((T) => T.k === 'dop');
+  TOPIC_BY.erh = TOPICS.find((T) => T.k === 'erg');
   const topicOf = (id) => TOPIC_BY[id.split(':')[0]];
   function topicNews(pool) {
     const out = [];
@@ -2327,7 +2338,9 @@ ${mouth}</svg>`;
     else if (k === 'zs') s = `Pfeil bei ${x}`; else if (k === 'hz') s = x; else if (k === 'dv') s = `${x} : ${y}`; else if (k === 'sach') s = `${x} ${D.SACH[+x] ? D.SACH[+x][0] : ''} …`;
     else if (k === 'sz' || k === 'dik') s = plain(D.WORDS[+x].w); else if (k === 'abc') s = `nach ${x}`; else if (k === 'reim') s = D.RHYMES[+x][0];
     else if (k === 'art' || k === 'mz') s = D.NOUNS[+x].s; else if (k === 'wa' || k === 'gk') s = wortOf(x, +y); else if (k === 'zz') s = D.PUNCT[+x][0]; else if (k === 'hw') s = D.HFW[+x];
-    return `${T ? T.n : ''}: ${s}`;
+    else if (k === 'zp') s = `${x} + ? = 10`; else if (k === 'zer') s = `${x} + ${y}`; else if (k === 'erg') s = `${x} + ? = ${Math.ceil(x / 10) * 10}`; else if (k === 'erh') s = `${x} + ? = 100`;
+    else if (k === 'ana') { const [, op, T2, u, b] = id.split(':'); const A = (op === 'p' ? +T2 * 10 : (+T2 - 1) * 10) + +u; s = `${A} ${op === 'p' ? '+' : '−'} ${b}`; } else if (k === 'vw') s = (D.VERW[+x] || [''])[0];
+    return `${T ? T.n.split(' (')[0] : ''}: ${s}`;
   }
   const wortOf = (t, i) => (t === 'N' ? D.NOUNS[i].s : t === 'V' ? D.VERBS[i] : D.ADJS[i]);
   // Uhrzeit mit Kevins Bausteinen: „Es ist“ + „halb“/„Viertel nach“/„Viertel vor“ + Zahl (+ „Uhr“)
@@ -2343,6 +2356,17 @@ ${mouth}</svg>`;
   const say = (text, id) => ({ id: id || '__none', text });
   const wid = (w) => 'k2w:' + w.toLowerCase();
   const sw = (w) => ({ id: wid(w), text: w });
+  // Zehnerfeld: a volle Punkte, plus (blau) weitere, extra = zweite Zahl als eigene Farbe (läuft ins 2. Feld über)
+  function tenFrame(a, plus, extra) {
+    const total = a + (plus || 0) + (extra || 0); const frames = Math.max(1, Math.ceil(total / 10));
+    return h('div', { class: 'tf-wrap' }, [...Array(frames)].map((_, f) => h('div', { class: 'tf' }, [...Array(10)].map((__, i) => { const n = f * 10 + i; const c = n < a ? 'd1' : n < a + (plus || 0) ? 'd2' : n < total ? 'd3' : ''; return h('span', { class: 'tf-c' }, c ? h('span', { class: 'tf-d ' + c }) : null); }))));
+  }
+  // Zehnerstangen + Einerpunkte; fill = fehlende Einer bis zum Zehner (hohl), extra = dazukommende Einer
+  function placeVal(n, fill, extra) {
+    const z = Math.floor(n / 10), e = n % 10;
+    if (fill && fill >= 10 && e === 0) return h('div', { class: 'tens' }, [...Array(z)].map(() => h('span', { class: 'ten-bar' })), [...Array(fill / 10)].map(() => h('span', { class: 'ten-bar hollow' })));
+    return h('div', { class: 'tens' }, [...Array(z)].map(() => h('span', { class: 'ten-bar' })), h('span', { class: 'ones' }, [...Array(e)].map(() => h('span', { class: 'one-dot' })), [...Array(fill || 0)].map(() => h('span', { class: 'one-dot hollow' })), [...Array(extra || 0)].map(() => h('span', { class: 'one-dot add' }))));
+  }
   function numTask(ui, answer, fbTitle, voice) {
     const slot = h('span', { class: 'slot' }, '?');
     ui.answers.replaceChildren(numpad((v) => { slot.classList.add(v === answer ? 'right' : 'wrong'); ui.done(v === answer); }, slot));
@@ -2443,6 +2467,55 @@ ${mouth}</svg>`;
       ui.choices(numOpts(n, [n + 5, n - 5, n + 10, n - 10]).map((v) => ({ label: String(v), value: v })), (v) => v === n, 'nums');
       ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `Der Pfeil zeigt auf ${n}.`), h('p', { class: 'strat' }, 'Jeder Strich ist 5 weiter. Die langen Striche sind die Zehner.')) });
       ui.audio((full) => (full ? [ui.promptPart] : null));
+    },
+    zehnerfreunde(t, ui) {
+      const a = +t.id.split(':')[1];
+      ui.prompt('Wie viele fehlen bis 10?', null);
+      ui.stage.append(tenFrame(a, 0), h('p', { class: 'expr small' }, `${a} + `, '§', ' = 10'));
+      const slot = numTask(ui, 10 - a, `${a} + ${10 - a} = 10`, null);
+      const ex = ui.stage.querySelector('.expr.small'); ex.replaceChildren(`${a} + `, slot, ' = 10');
+      ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, tenFrame(a, 10 - a), h('p', { class: 'eq-big' }, `${a} + ${10 - a} = 10`), h('p', { class: 'strat' }, `${a} und ${10 - a} sind Zehnerfreunde.`)), voice: [] });
+      ui.audio(() => null);
+    },
+    analogie(t, ui) {
+      const [, op, T, u, b] = t.id.split(':'); const tt = +T, uu = +u, bb = +b; const plus = op === 'p';
+      const small = plus ? uu + bb : uu - bb; const A = (plus ? tt * 10 : (tt - 1) * 10) + uu; const big = plus ? A + bb : A - bb;
+      const sm = `${uu} ${plus ? '+' : '−'} ${bb} = ${small}`;
+      ui.prompt('Die kleine Aufgabe hilft dir!', null);
+      const slot = numTask(ui, big, `${A} ${plus ? '+' : '−'} ${bb} = ${big}`, null);
+      ui.stage.append(h('p', { class: 'ana-small' }, 'Kleine Aufgabe: ', h('b', null, sm)), h('p', { class: 'expr' }, `${A} ${plus ? '+' : '−'} ${bb} = `, slot), placeVal(A));
+      ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${A} ${plus ? '+' : '−'} ${bb} = ${big}`), h('p', { class: 'strat' }, `Die Zehner bleiben, nur die Einer rechnen: ${sm}.`)), voice: [] });
+      ui.audio(() => null);
+    },
+    ergaenzen(t, ui) {
+      const [k, x] = t.id.split(':'); const n = +x; const goal = k === 'erh' ? 100 : Math.ceil(n / 10) * 10;
+      ui.prompt(`Wie viel fehlt bis ${goal}?`, null);
+      const slot = numTask(ui, goal - n, `${n} + ${goal - n} = ${goal}`, null);
+      ui.stage.append(placeVal(n, goal - n), h('p', { class: 'expr' }, `${n} + `, slot, ` = ${goal}`));
+      ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${n} + ${goal - n} = ${goal}`), h('p', { class: 'strat' }, k === 'erh' ? `${n / 10} Zehner + ${(goal - n) / 10} Zehner = 10 Zehner = 100` : `${n % 10} + ${goal - n} = 10, also ${n} + ${goal - n} = ${goal}`)), voice: [] });
+      ui.audio(() => null);
+    },
+    zehnertrick(t, ui) {
+      // Schritt für Schritt wie in der Schule: 48 + 6 = 48 + 2 + 4 → 50 + 4 = 54
+      const [, A, B] = t.id.split(':').map(Number); const toTen = (10 - (A % 10)) % 10 || 10; const rest = B - toTen; const ten = A + toTen; const res = A + B;
+      ui.prompt('Erst bis zum Zehner, dann den Rest!', null);
+      const s1 = h('span', { class: 'slot' }, '?'), s2 = h('span', { class: 'slot' }, '?'), s3 = h('span', { class: 'slot' }, '?');
+      ui.stage.append(A < 10 ? h('div', { class: 'tf-row' }, tenFrame(A, 0, B)) : placeVal(A, 0, B),
+        h('p', { class: 'expr' }, `${A} + ${B} = `, s3),
+        h('p', { class: 'zt-steps' }, `① ${A} + `, s1, ` = ${ten}`), h('p', { class: 'zt-steps' }, `② ${ten} + `, s2, ` = ?`));
+      let allOk = true; const steps = [[s1, toTen], [s2, rest], [s3, res]]; let k = 0;
+      const nextPad = () => {
+        const [sl, ans] = steps[k]; sl.classList.add('now');
+        ui.answers.replaceChildren(numpad((v) => {
+          sl.classList.remove('now');
+          if (v !== ans) { allOk = false; sl.textContent = String(ans); sl.classList.add('wrong'); SFX.oops(); } else { sl.classList.add('right'); SFX.ok(); }
+          k++; if (k === 2) ui.stage.querySelectorAll('.zt-steps')[1].lastChild.textContent = ` = ${res}`;
+          if (k < steps.length) nextPad(); else ui.done(allOk);
+        }, sl));
+      };
+      nextPad();
+      ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${A} + ${B} = ${res}`), h('p', { class: 'strat' }, `${A} + ${toTen} = ${ten}, dann ${ten} + ${rest} = ${res}. ${B} zerlegt in ${toTen} und ${rest}.`)), voice: [] });
+      ui.audio(() => null);
     },
     stellenwert(t, ui) {
       const n = +t.id.split(':')[1]; const z = Math.floor(n / 10), e = n % 10;
@@ -2735,7 +2808,7 @@ ${mouth}</svg>`;
   const TRY_KINDS = [
     ['⛸️ Rechnen', [['zeigen', 'Bild-Rechnen (Zwanzigerfeld)'], ['tippen', 'Ausrechnen mit Tipp'], ['fehlt', 'Welche Zahl fehlt?'], ['pablo', 'Pablo: Stimmt das oder Schummel?'], ['umkehr', 'Minus mit der Plus-Aufgabe'], ['maxfehler', 'Max hat sich verrechnet (erklären)'], ['blitz', 'Blitz-Aufgabe'], ['blitzblick', 'Blitzblick: Punkte erkennen'], ['geschichte', 'Rechengeschichte'], ['pfoten', 'Pfoten zählen (Mal)']]],
     ['🏊 Lesen & Schreiben', [['grossklein', 'Großen/kleinen Buchstaben finden'], ['laut', 'Welcher Laut ist das?'], ['anlaut', 'Schwierige Laute (ei, eu, au …)'], ['silbehoeren', 'Silbe hören'], ['silbelesen', 'Silbe lesen'], ['wortbild', 'Wort lesen, Bild wählen'], ['hoeren', 'Wort hören, Wort wählen'], ['bauen', 'Wort aus Silben bauen'], ['vorlesen', 'Max ein Wort vorlesen'], ['blitzwort', 'Blitzlesen'], ['abschreiben', 'Abschreiben mit Stift'], ['merkschreiben', 'Merken und aufschreiben'], ['satzlesen', 'Satz vorlesen'], ['quatsch', 'Stimmt das oder Quatsch?'], ['luecke', 'Welches Wort fehlt?']]],
-    ['📐 Mathe 2. Klasse', [['form', 'Formen'], ['vergleich', 'Größer, kleiner, gleich'], ['doppel', 'Verdoppeln / Halbieren'], ['uhr', 'Uhrzeit'], ['laenge', 'Längen (cm)'], ['sachaufgabe', 'Sachaufgabe selbst lesen'], ['geld', 'Geld'], ['nachbar', 'Nachbarzahlen'], ['zahlenstrahl', 'Zahlenstrahl'], ['stellenwert', 'Zehner und Einer'], ['geteilt', 'Geteilt']]],
+    ['📐 Mathe 2. Klasse', [['zehnerfreunde', 'Zehnerfreunde'], ['zehnertrick', 'Zehner-Trick Schritt für Schritt'], ['analogie', 'Kleine Aufgabe hilft (28 + 2)'], ['ergaenzen', 'Bis zum Zehner ergänzen'], ['form', 'Formen'], ['vergleich', 'Größer, kleiner, gleich'], ['doppel', 'Verdoppeln / Halbieren'], ['uhr', 'Uhrzeit'], ['laenge', 'Längen (cm)'], ['sachaufgabe', 'Sachaufgabe selbst lesen'], ['geld', 'Geld'], ['nachbar', 'Nachbarzahlen'], ['zahlenstrahl', 'Zahlenstrahl'], ['stellenwert', 'Zehner und Einer'], ['geteilt', 'Geteilt']]],
     ['📝 Deutsch 2. Klasse', [['blitzhw', 'Blitzwörter (häufigste Wörter)'], ['diktat', 'Diktat mit Buchstaben'], ['diktatstift', 'Diktat mit Stift'], ['silbenzahl', 'Silben zählen'], ['abc', 'ABC'], ['reim', 'Reime'], ['artikel', 'Der, die, das'], ['verwechsel', 'im oder mir? (genau lesen)'], ['mehrzahl', 'Einzahl / Mehrzahl'], ['wortart', 'Wortarten'], ['grossklein2', 'Groß oder klein?'], ['satzzeichen', 'Satzzeichen']]],
     ['🗣️ Russisch', [['ruhoeren', 'Hören und Bild wählen'], ['rusagen', 'Auf Russisch sagen'], ['rujanein', 'Stimmt das? (да / нет)'], ['runach', 'Frage nachsprechen'], ['ruantwort', 'Auf Russisch antworten']]]
   ];
