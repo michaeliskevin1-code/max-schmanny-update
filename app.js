@@ -950,14 +950,15 @@ ${mouth}</svg>`;
     function openDock() { want = true; fab.hidden = true; document.body.classList.add('radio-on'); load(); dock.hidden = false; if (ready && !held) { player.setVolume(vol()); player.playVideo(); } }
     function closeDock() { want = false; dock.hidden = true; document.body.classList.remove('radio-on'); if (ready) player.pauseVideo(); if (state.settings.menuMusic && musicHere) fab.hidden = false; }
     const L = () => D.MUSIC || [];
-    const vol = () => Math.round((state.settings.menuVol || 9) * (ducked ? 0.35 : 1));
+    let danceMode = false, chorus = false, playing = false;
+    const vol = () => Math.round((danceMode ? Math.max(30, (state.settings.menuVol || 9) * 3) : (state.settings.menuVol || 9)) * (ducked ? 0.35 : 1));
     function load() {
       if (loading || VIEWER || !L().length) return; loading = true;
       document.body.append(dock);
       const fi = L().findIndex((m) => m.first && !bad()[m.yt]); idx = fi >= 0 ? fi : draw();
       const H = {
         onReady: () => { ready = true; player.setVolume(vol()); title(); if (want && !held) player.playVideo(); },
-        onStateChange: (e) => { if (e.data === 0) next(); if (e.data === 1) { failed = 0; title(); } },
+        onStateChange: (e) => { playing = e.data === 1; if (e.data === 0) next(); if (e.data === 1) { failed = 0; title(); if (chorus) { chorus = false; let du = 0; try { du = player.getDuration() || 0; } catch (er) { } const t = du > 0 ? Math.max(25, Math.min(du * 0.33, du - 45)) : 45; try { player.seekTo(t, true); } catch (er) { } } } },
         onError: (e) => {
           const code = (e && e.data) || 0;
           try { if ([100, 101, 150].includes(code)) { const id = L()[idx].yt; state.musicBad = Object.assign({}, state.musicBad, { [id]: code }); save(); } } catch (er) { }
@@ -969,10 +970,10 @@ ${mouth}</svg>`;
         // In der App über die github.io-Seite abspielen (YouTube akzeptiert https://localhost nicht immer)
         const fr = h('iframe', { src: RADIO_URL + '?v=' + L()[idx].yt, width: 200, height: 200, allow: 'autoplay; encrypted-media', style: 'border:0', title: 'Kevins Radio' });
         dock.querySelector('#yt-frame').replaceWith(fr);
-        let vt = ''; const post = (o) => { try { fr.contentWindow.postMessage(o, '*'); } catch (e) { } };
-        player = { setVolume: (v) => post({ mxc: 'vol', v }), playVideo: () => post({ mxc: 'play' }), pauseVideo: () => post({ mxc: 'pause' }), loadVideoById: (id) => post({ mxc: 'load', id }), getVideoData: () => ({ title: vt }) };
+        let vt = '', vdur = 0; const post = (o) => { try { fr.contentWindow.postMessage(o, '*'); } catch (e) { } };
+        player = { setVolume: (v) => post({ mxc: 'vol', v }), playVideo: () => post({ mxc: 'play' }), pauseVideo: () => post({ mxc: 'pause' }), loadVideoById: (id) => post({ mxc: 'load', id }), getVideoData: () => ({ title: vt }), getDuration: () => vdur, seekTo: (t) => post({ mxc: 'seek', t }) };
         window.addEventListener('message', (e) => { if (e.source !== fr.contentWindow) return; const d = e.data || {}; if (!d.mx) return;
-          if (d.ev === 'ready') H.onReady(); else if (d.ev === 'state') { if (d.title) vt = d.title; H.onStateChange({ data: d.data }); } else if (d.ev === 'error') H.onError({ data: d.data }); });
+          if (d.ev === 'ready') H.onReady(); else if (d.ev === 'state') { if (d.title) vt = d.title; if (d.dur) vdur = d.dur; H.onStateChange({ data: d.data }); } else if (d.ev === 'error') H.onError({ data: d.data }); });
         setTimeout(() => { if (!ready) radioReport('Radio-Seite lädt nicht (kein Internet oder github.io gesperrt)'); }, 20000);
         return;
       }
@@ -988,7 +989,7 @@ ${mouth}</svg>`;
     function title() { const t = dock.querySelector('.yt-t'); if (!t || !L()[idx]) return; let n = L()[idx].t; try { const d = player && player.getVideoData && player.getVideoData(); if (d && d.title) n = d.title; } catch (e) { } t.textContent = '📻 ' + (n || 'Kevins Radio'); }
     function next() { if (!ready) return; idx = draw(); player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); }
     function show() { musicHere = true; if (!state.settings.menuMusic || VIEWER || !L().length) return; if (!fab.isConnected) document.body.append(fab); if (state.settings.radioOpen !== false) openDock(); else { fab.hidden = false; dock.hidden = true; } }
-    function hide() { musicHere = false; want = false; dock.hidden = true; document.body.classList.remove('radio-on'); fab.hidden = true; if (ready) player.pauseVideo(); }
+    function hide() { if (danceMode) { danceMode = false; chorus = false; } musicHere = false; want = false; dock.hidden = true; document.body.classList.remove('radio-on'); fab.hidden = true; if (ready) player.pauseVideo(); }
     function duck(on) { ducked = on; if (ready && want) player.setVolume(vol()); }
     // Tanz-Beat läuft: Radio kurz anhalten, danach weiter
     let held = false, musicHere = false;
@@ -998,7 +999,16 @@ ${mouth}</svg>`;
       bar.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; drag = true; const r = dock.getBoundingClientRect(); sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top; try { bar.setPointerCapture(e.pointerId); } catch (er) { } });
       bar.addEventListener('pointermove', (e) => { if (!drag) return; const x = Math.max(0, Math.min(innerWidth - dock.offsetWidth, ox + e.clientX - sx)), y = Math.max(0, Math.min(innerHeight - dock.offsetHeight, oy + e.clientY - sy)); Object.assign(dock.style, { left: x + 'px', top: y + 'px', right: 'auto', bottom: 'auto' }); });
       ['pointerup', 'pointercancel'].forEach((ev) => bar.addEventListener(ev, () => { drag = false; })); })();
-    return { show, hide, duck, hold, setVol() { if (ready) player.setVolume(vol()); } };
+    // Tanz-Pause: ein Lied aus der Liste, ungefähr ab dem Refrain (geschätzt: ca. ein Drittel ins Lied), lauter als im Menü
+    function dance() {
+      if (!state.settings.menuMusic || VIEWER || !L().length) return false;
+      if (loading && !ready && player) return false; // Radio lädt nicht/kaputt -> eigener Beat
+      danceMode = true; musicHere = true; if (!fab.isConnected) document.body.append(fab);
+      want = true; fab.hidden = true; document.body.classList.add('radio-on'); dock.hidden = false;
+      if (!ready) { load(); chorus = true; return true; }
+      idx = draw(); chorus = true; player.loadVideoById(L()[idx].yt); player.setVolume(vol()); title(); return true;
+    }
+    return { show, hide, duck, hold, dance, playing: () => playing, setVol() { if (ready) player.setVolume(vol()); } };
   })();
   // Erklär-Fenster beim ersten Öffnen eines Bereichs (Kevins Stimme, sonst ausnahmsweise Gerätestimme)
   function explain(key, then) {
@@ -2037,7 +2047,7 @@ ${mouth}</svg>`;
     if (own && own.props && own.props.some((x) => x === 'disco' || x === 'kugel')) scr.classList.add('party');
     mount(scr, 'dance');
     const timer = setInterval(() => { left--; num.textContent = String(Math.max(0, left)); if (left <= 0) { clearInterval(timer); scr.classList.add('time-up'); } if (!document.body.contains(scr)) clearInterval(timer); }, 1000);
-    setTimeout(() => { Voice.say(own ? [P('p:deintanz'), { text: own.name.replace('-', ' ') }] : [P('p:tanz'), { id: 'tanz:' + i, text: plain(D.DANCES[i]) }]).then(() => { if (document.body.contains(scr)) Beat.start(); }); }, 250);
+    setTimeout(() => { Voice.say(own ? [P('p:deintanz'), { text: own.name.replace('-', ' ') }] : [P('p:tanz'), { id: 'tanz:' + i, text: plain(D.DANCES[i]) }]).then(() => { if (!document.body.contains(scr)) return; let ok = false; try { ok = MenuMusic.dance(); } catch (e) { } if (!ok) Beat.start(); else setTimeout(() => { if (document.body.contains(scr) && !MenuMusic.playing()) { MenuMusic.hide(); Beat.start(); } }, 7000); }); }, 250);
   }
 
   // ---------- Ende ----------
@@ -2298,6 +2308,7 @@ ${mouth}</svg>`;
     { k: 'mz', pool: 'read', n: 'Einzahl und Mehrzahl', gate: () => stageUnlocked('w'), ids: D.NOUNS.map((x, i) => i).filter((i) => D.NOUNS[i].p !== D.NOUNS[i].s).map((i) => 'mz:' + i), kind: 'mehrzahl' },
     { k: 'wa', pool: 'read', n: 'Wortarten', gate: () => stageUnlocked('w'), ids: D.NOUNS.slice(0, 15).map((x, i) => 'wa:N:' + i).concat(D.VERBS.map((x, i) => 'wa:V:' + i), D.ADJS.map((x, i) => 'wa:A:' + i)), kind: 'wortart' },
     { k: 'gk', pool: 'read', n: 'Groß oder klein', gate: () => stageUnlocked('w'), ids: D.NOUNS.slice(15).map((x, i) => 'gk:N:' + (i + 15)).concat(D.VERBS.map((x, i) => 'gk:V:' + i), D.ADJS.map((x, i) => 'gk:A:' + i)), kind: 'grossklein2' },
+    { k: 'vw', pool: 'read', n: 'im oder mir? (genau lesen)', gate: () => stageUnlocked('w'), ids: (D.VERW || []).map((x, i) => 'vw:' + i), kind: 'verwechsel' },
     { k: 'zz', pool: 'read', n: 'Satzzeichen', gate: () => stageUnlocked('t'), ids: D.PUNCT.map((x, i) => 'zz:' + i), kind: 'satzzeichen' }
   ];
   const TOPIC_BY = {}; TOPICS.forEach((T) => { T.ids.forEach((id) => { TOPIC_BY[id.split(':')[0]] = T; }); });
@@ -2500,6 +2511,16 @@ ${mouth}</svg>`;
       ui.choices([{ label: '🔠 Groß', value: true }, { label: '🔡 Klein', value: false }], (v) => v === big, 'two');
       ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, big ? `${D.NOUNS[+x].a} ${w}` : w), h('p', { class: 'strat' }, big ? 'Namenwörter schreibt man groß.' : 'Tunwörter und Wiewörter schreibt man klein.')) });
       ui.audio((full) => (full ? [ui.promptPart] : null));
+    },
+    verwechsel(t, ui) {
+      const [sent, right, wrong] = D.VERW[+t.id.split(':')[1]];
+      ui.prompt('Welches Wort passt? Lies jeden Buchstaben genau!', null);
+      const [a, b] = sent.split('___');
+      ui.stage.append(h('p', { class: 'sentence-plain' }, a, h('span', { class: 'slot' }, '?'), b));
+      ui.choices(shuffle([right, ...wrong]).map((v) => ({ label: v, value: v })), (v) => v === right, 'words');
+      const spell = (w) => [...w].join(' – ');
+      ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, sent.replace('___', right)), h('p', { class: 'strat' }, `${right} = ${spell(right)}. ${wrong.map((w) => `${w} = ${spell(w)}`).join('. ')}. Lies jeden Buchstaben, nicht raten!`)), voice: [] });
+      ui.audio(() => null);
     },
     satzzeichen(t, ui) {
       const [s, p] = D.PUNCT[+t.id.split(':')[1]];
@@ -2715,7 +2736,7 @@ ${mouth}</svg>`;
     ['⛸️ Rechnen', [['zeigen', 'Bild-Rechnen (Zwanzigerfeld)'], ['tippen', 'Ausrechnen mit Tipp'], ['fehlt', 'Welche Zahl fehlt?'], ['pablo', 'Pablo: Stimmt das oder Schummel?'], ['umkehr', 'Minus mit der Plus-Aufgabe'], ['maxfehler', 'Max hat sich verrechnet (erklären)'], ['blitz', 'Blitz-Aufgabe'], ['blitzblick', 'Blitzblick: Punkte erkennen'], ['geschichte', 'Rechengeschichte'], ['pfoten', 'Pfoten zählen (Mal)']]],
     ['🏊 Lesen & Schreiben', [['grossklein', 'Großen/kleinen Buchstaben finden'], ['laut', 'Welcher Laut ist das?'], ['anlaut', 'Schwierige Laute (ei, eu, au …)'], ['silbehoeren', 'Silbe hören'], ['silbelesen', 'Silbe lesen'], ['wortbild', 'Wort lesen, Bild wählen'], ['hoeren', 'Wort hören, Wort wählen'], ['bauen', 'Wort aus Silben bauen'], ['vorlesen', 'Max ein Wort vorlesen'], ['blitzwort', 'Blitzlesen'], ['abschreiben', 'Abschreiben mit Stift'], ['merkschreiben', 'Merken und aufschreiben'], ['satzlesen', 'Satz vorlesen'], ['quatsch', 'Stimmt das oder Quatsch?'], ['luecke', 'Welches Wort fehlt?']]],
     ['📐 Mathe 2. Klasse', [['form', 'Formen'], ['vergleich', 'Größer, kleiner, gleich'], ['doppel', 'Verdoppeln / Halbieren'], ['uhr', 'Uhrzeit'], ['laenge', 'Längen (cm)'], ['sachaufgabe', 'Sachaufgabe selbst lesen'], ['geld', 'Geld'], ['nachbar', 'Nachbarzahlen'], ['zahlenstrahl', 'Zahlenstrahl'], ['stellenwert', 'Zehner und Einer'], ['geteilt', 'Geteilt']]],
-    ['📝 Deutsch 2. Klasse', [['blitzhw', 'Blitzwörter (häufigste Wörter)'], ['diktat', 'Diktat mit Buchstaben'], ['diktatstift', 'Diktat mit Stift'], ['silbenzahl', 'Silben zählen'], ['abc', 'ABC'], ['reim', 'Reime'], ['artikel', 'Der, die, das'], ['mehrzahl', 'Einzahl / Mehrzahl'], ['wortart', 'Wortarten'], ['grossklein2', 'Groß oder klein?'], ['satzzeichen', 'Satzzeichen']]],
+    ['📝 Deutsch 2. Klasse', [['blitzhw', 'Blitzwörter (häufigste Wörter)'], ['diktat', 'Diktat mit Buchstaben'], ['diktatstift', 'Diktat mit Stift'], ['silbenzahl', 'Silben zählen'], ['abc', 'ABC'], ['reim', 'Reime'], ['artikel', 'Der, die, das'], ['verwechsel', 'im oder mir? (genau lesen)'], ['mehrzahl', 'Einzahl / Mehrzahl'], ['wortart', 'Wortarten'], ['grossklein2', 'Groß oder klein?'], ['satzzeichen', 'Satzzeichen']]],
     ['🗣️ Russisch', [['ruhoeren', 'Hören und Bild wählen'], ['rusagen', 'Auf Russisch sagen'], ['rujanein', 'Stimmt das? (да / нет)'], ['runach', 'Frage nachsprechen'], ['ruantwort', 'Auf Russisch antworten']]]
   ];
   function tryItem(kind) {
@@ -3147,7 +3168,8 @@ ${mouth}</svg>`;
     const results = shuffle(Object.keys(by).map(Number)).sort((a, b) => by[b].length - by[a].length).slice(0, Math.max(pic.cols.length + 3, 8));
     const chosen = shuffle(results).slice(0, pic.cols.length);
     while (chosen.length < pic.cols.length) chosen.push((chosen[chosen.length - 1] || 0) + 1); // falls die Stufe sehr wenige Ergebnisse hat
-    const tasks = pic.parts.map((p) => { const c = chosen[p[2]]; const ids = by[c] || []; return ids.length ? pick(ids) : null; });
+    // Jedes Feld bekommt eine eigene Rechnung; das Ergebnis hängt NICHT an der Farbe (sonst kann man von der Farbe aufs Ergebnis schließen)
+    let bag = []; const tasks = pic.parts.map(() => { if (!bag.length) bag = shuffle(pool.filter((id) => mathInfo(id).c >= 0)); return bag.pop() || null; });
     return { chosen, tasks, sk, need };
   }
   const exprOf = (id, c) => { if (!id) return String(c); const I = mathInfo(id); return `${I.a} ${I.op} ${I.b}`; };
@@ -3156,8 +3178,8 @@ ${mouth}</svg>`;
     const scr = h('main', { class: 'screen map studio' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showHome()), h('h1', { class: 'h-display' }, 'Malstudio')),
       studioTabs('zahlen'),
-      h('p', { class: 'note' }, `Jede Farbe hat eine Zahl. Rechne die Aufgabe im Feld aus und male es mit der passenden Farbe an! Deine Aufgaben: ${sk.n}.`),
-      h('div', { class: 'mz-list' }, MZ_PICS.map((P) => h('button', { class: 'mz-card', onclick: () => { SFX.tap(); showMz(P); } }, svgEl(mzSvg(P, null, true), 'mz-thumb'), h('span', null, P.n + ((state.mz && state.mz.pics || {})[P.id] ? ' ✓' : ''))))));
+      h('p', { class: 'note' }, `Tipp ein Feld an, rechne die Aufgabe und tipp das Ergebnis ein. Stimmt es, malt sich das Feld bunt. Welche Farbe kommt, ist eine Überraschung! Deine Aufgaben: ${sk.n}.`),
+      h('div', { class: 'mz-list' }, MZ_PICS.map((P) => h('button', { class: 'mz-card', onclick: () => { SFX.tap(); showMz(P); } }, svgEl(mzSvg(P, null, !!(state.mz && state.mz.pics || {})[P.id]), 'mz-thumb'), h('span', null, P.n + ((state.mz && state.mz.pics || {})[P.id] ? ' ✓' : ''))))));
     mount(scr, 'home'); MenuMusic.show();
   }
   function mzSvg(P, fills, thumb) {
@@ -3167,28 +3189,32 @@ ${mouth}</svg>`;
   }
   function showMz(P) {
     const T = mzTasks(P); const fills = P.parts.map(() => null); let sel = null, errors = 0, firstTry = 0; const tried = new Set();
-    const wrap = h('div', { class: 'mz-pic' }); const say = h('p', { class: 'mz-say' }, 'Wähl unten eine Farbe, dann tipp ein Feld an!');
+    const wrap = h('div', { class: 'mz-pic' }); const say = h('p', { class: 'mz-say' }, 'Tipp ein Feld an und rechne!');
     function render() {
       wrap.innerHTML = mzSvg(P, fills);
       const svg = wrap.querySelector('svg'); const lab = svg.querySelector('.mz-labels');
-      P.parts.forEach((p, i) => { if (fills[i]) return; const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text'); tx.setAttribute('x', p[3]); tx.setAttribute('y', p[4]); tx.setAttribute('class', 'mz-lab'); tx.textContent = exprOf(T.tasks[i], T.chosen[p[2]]); lab.append(tx); });
-      svg.querySelectorAll('.mz-part').forEach((el) => el.addEventListener('click', () => tap(+el.dataset.i, el)));
+      P.parts.forEach((p, i) => { if (fills[i]) return; const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text'); tx.setAttribute('x', p[3]); tx.setAttribute('y', p[4]); tx.setAttribute('class', 'mz-lab'); tx.textContent = exprOf(T.tasks[i], 0); if (i === sel) tx.classList.add('on'); lab.append(tx); }); svg.querySelectorAll('.mz-part').forEach((el) => el.classList.toggle('sel', +el.dataset.i === sel));
+      svg.querySelectorAll('.mz-part').forEach((el) => el.addEventListener('click', () => tap(+el.dataset.i)));
     }
-    function tap(i, el) {
-      if (fills[i]) return;
-      const p = P.parts[i]; const right = T.chosen[p[2]]; const id = T.tasks[i];
-      say.textContent = `${exprOf(id, right)} = ?`;
-      if (sel == null) { say.textContent += '  Wähl unten eine Farbe!'; return; }
-      if (T.chosen[sel] === right) {
+    const ansOf = (i) => { const id = T.tasks[i]; return id ? mathInfo(id).c : 0; };
+    function tap(i) {
+      if (fills[i]) return; sel = i; SFX.tap();
+      say.textContent = `${exprOf(T.tasks[i], 0)} = ?`; render();
+    }
+    function submit(v) {
+      if (sel == null || fills[sel]) { say.textContent = 'Tipp zuerst ein weißes Feld an!'; return; }
+      const i = sel, p = P.parts[i], id = T.tasks[i], right = ansOf(i);
+      if (v === right) {
         fills[i] = P.cols[p[2]]; SFX.ok();
         if (!tried.has(i)) { firstTry++; if (id) grade(id, true); }
         say.textContent = `${exprOf(id, right)} = ${right} ✓`;
+        const nx = P.parts.findIndex((_, k) => !fills[k]); sel = nx >= 0 ? nx : null;
         render();
-        if (fills.every(Boolean)) finish();
+        if (fills.every(Boolean)) finish(); else if (sel != null) say.textContent += `   Weiter: ${exprOf(T.tasks[sel], 0)} = ?`;
       } else {
         SFX.oops(); errors++; if (!tried.has(i) && id) grade(id, false); tried.add(i);
-        el.classList.remove('shake'); void el.getBoundingClientRect(); el.classList.add('shake');
-        say.textContent = `${exprOf(id, right)} ist nicht ${T.chosen[sel]}. Rechne nochmal!`;
+        const el = wrap.querySelector(`.mz-part[data-i="${i}"]`); if (el) { el.classList.remove('shake'); void el.getBoundingClientRect(); el.classList.add('shake'); }
+        say.textContent = `${exprOf(id, right)} ist nicht ${v}. Rechne nochmal!`;
       }
     }
     function finish() {
@@ -3204,10 +3230,11 @@ ${mouth}</svg>`;
         h('div', { class: 'explain-btns' }, h('button', { class: 'tile', onclick: () => { ov.remove(); showMzList(); } }, 'Noch ein Bild'), h('button', { class: 'tile go', onclick: async (e) => { e.target.disabled = true; const c = document.createElement('canvas'); c.width = 600; c.height = 600; const x = c.getContext('2d'); const im = new Image(); im.src = svgSrc(mzSvg(P, fills)); try { await im.decode(); } catch (er) { } x.fillStyle = '#fff'; x.fillRect(0, 0, 600, 600); x.drawImage(im, 0, 0, 600, 600); const r = await sendPicture(c.toDataURL('image/jpeg', 0.8)); toast(r === 'ok' ? 'Kevin bekommt dein Bild! 💌' : 'Wird geschickt, sobald Internet da ist.', '💌'); e.target.textContent = 'Geschickt ✓'; } }, '💌 An Kevin schicken'))));
       document.body.append(ov);
     }
-    const palette = h('div', { class: 'mz-palette' }, P.cols.map((c, ci) => { const b = h('button', { class: 'mz-col', style: `--c:${c}`, onclick: () => { sel = ci; palette.querySelectorAll('.on').forEach((x) => x.classList.remove('on')); b.classList.add('on'); SFX.tap(); say.textContent = `Farbe ${T.chosen[ci]}: Welche Felder ergeben ${T.chosen[ci]}?`; } }, h('span', { class: 'mz-sw' }), h('span', { class: 'mz-num' }, String(T.chosen[ci]))); return b; }));
+    const pad = miniPad((v) => submit(v)); const palette = h('div', { class: 'mz-pad' }, h('div', { class: 'fr-ans' }, pad.disp), pad.grid);
     const scr = h('main', { class: 'screen map studio' },
       h('div', { class: 'topbar' }, iconBtn('Zurück', '←', () => showMzList()), h('h1', { class: 'h-display' }, '🔢 ' + P.n)),
       h('div', { class: 'mz-wrap' }, wrap, h('div', { class: 'mz-side' }, say, palette)));
+    sel = 0; say.textContent = `${exprOf(T.tasks[0], 0)} = ?`;
     mount(scr, 'home'); MenuMusic.show(); render();
   }
 
@@ -3450,7 +3477,7 @@ ${mouth}</svg>`;
   // ---------- Start ----------
   window.__maxApp = {
     get state() { return state; }, setState(s) { state = Object.assign(defaults(), s); save(); }, skillStars, stageUnlocked, skillUnlocked, MSK, newRead, newMath, buildSession, graphemes,
-    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, showFotoList, showFoto, FotoDB, showChat, addKevinMsg, unlockPrivPhotos, showParents, showStudio, showMzList, showGallery, mzLevel, fullStatusText, explain, pushSnapshot, svgMax, svgCat,
+    startTest, testAvailable, clipGroups, tryTask, TRY_KINDS, showTour, showFotoList, showFoto, FotoDB, showChat, showDance, addKevinMsg, unlockPrivPhotos, showParents, showStudio, showMzList, showGallery, mzLevel, fullStatusText, explain, pushSnapshot, svgMax, svgCat,
     debugTask(id, kind) { startSession(poolOf(id)); S.queue = []; S.N = 99; renderTask({ id, kind, isNew: false, retry: false }); }
   };
   if (VIEWER) { const bar = h('div', { class: 'viewer-bar' }); document.body.prepend(bar); viewerLoad(bar); } else showSplash();

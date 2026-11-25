@@ -14,7 +14,7 @@ window.onYouTubeIframeAPIReady = function () {
     playerVars: { playsinline: 1, controls: 1, rel: 0, modestbranding: 1, origin: location.origin },
     events: {
       onReady: function () { send({ ev: 'ready' }); },
-      onStateChange: function (e) { var d = {}; try { d = P.getVideoData() || {}; } catch (x) { } send({ ev: 'state', data: e.data, title: d.title || '' }); },
+      onStateChange: function (e) { var d = {}; try { d = P.getVideoData() || {}; } catch (x) { } var du = 0; try { du = P.getDuration() || 0; } catch (x) { } send({ ev: 'state', data: e.data, title: d.title || '', dur: du }); },
       onError: function (e) { send({ ev: 'error', data: e.data }); }
     } });
 };
@@ -22,7 +22,7 @@ addEventListener('message', function (e) {
   var d = e.data || {}; if (!d.mxc || !P) return;
   try {
     if (d.mxc === 'play') P.playVideo(); else if (d.mxc === 'pause') P.pauseVideo();
-    else if (d.mxc === 'vol') P.setVolume(d.v); else if (d.mxc === 'load') P.loadVideoById(d.id);
+    else if (d.mxc === 'vol') P.setVolume(d.v); else if (d.mxc === 'seek') P.seekTo(d.t, true); else if (d.mxc === 'load') P.loadVideoById(d.id);
   } catch (x) { }
 });
 </script>

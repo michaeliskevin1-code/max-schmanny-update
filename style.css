@@ -750,3 +750,6 @@ button { font: inherit; color: inherit; }
 /* Radio-Fenster offen: unten Platz lassen, damit nichts dauerhaft verdeckt ist */
 body.radio-on .screen { padding-bottom: 260px; }
 body.radio-on .studio-side { padding-bottom: 250px; }
+.mz-part.sel { stroke: #ff3d8b; stroke-width: 5; }
+.mz-lab.on { fill: #ff3d8b; font-weight: 800; }
+.mz-pad { display: flex; flex-direction: column; gap: 8px; align-items: center; }

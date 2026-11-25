@@ -715,6 +715,25 @@ window.APPDATA.EXPLAIN = {
 };
 
 // ---------- Kevins Musik: läuft leise im Menü (eingebetteter YouTube-Player, nur mit Internet) ----------
+// Verwechsel-Wörter (Diana liest „im“ oft als „mir“): Satz mit Lücke, richtiges Wort, Ablenker
+window.APPDATA.VERW = [
+  ['Max spielt ___ Garten.', 'im', ['mir', 'in']],
+  ['Gib ___ bitte den Ball!', 'mir', ['im', 'mit']],
+  ['Schmanny schläft ___ Bett.', 'im', ['mir', 'ihm']],
+  ['Das Eis gehört ___!', 'mir', ['im', 'mit']],
+  ['Der Fisch schwimmt ___ Wasser.', 'im', ['mir', 'in']],
+  ['Kannst du ___ helfen?', 'mir', ['im', 'mit']],
+  ['Diana geht ___ die Schule.', 'in', ['im', 'ihm']],
+  ['Max hat Hunger. Ich gebe ___ einen Keks.', 'ihm', ['im', 'mir']],
+  ['Pablo tanzt ___ Schmanny.', 'mit', ['mir', 'im']],
+  ['Die Milch steht ___ Kühlschrank.', 'im', ['mir', 'ihm']],
+  ['Schmanny springt ___ den Karton.', 'in', ['im', 'mir']],
+  ['Kevin schreibt ___ einen Brief.', 'mir', ['im', 'mit']],
+  ['___ Winter ist es kalt.', 'Im', ['Mir', 'In']],
+  ['___ ist kalt. Wo ist meine Jacke?', 'Mir', ['Im', 'Mit']],
+  ['Wir fahren ___ dem Bus.', 'mit', ['mir', 'im']],
+  ['Der Ball liegt ___ Schrank.', 'im', ['mir', 'ihm']]
+];
 window.APPDATA.MUSIC = [
   { yt: 'oR30PyN0CPg', t: '', first: true },
   { yt: 'hNFoCOKk7LE', t: 'Lana Del Rey – Peppers' },
