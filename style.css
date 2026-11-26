@@ -799,3 +799,25 @@ body.radio-on .studio-side { padding-bottom: 250px; }
 .house-cell { width: 110px; height: 70px; display: grid; place-items: center; font-size: 1.9rem; font-weight: 800; border-right: 3px solid #46546b; background: #fff; }
 .house-cell:last-child { border-right: none; }
 .zrad-wrap svg { width: min(260px, 70vw); height: auto; }
+/* Rechenweg-Karte (Schritt für Schritt) */
+.rw-pic { display: flex; justify-content: center; transform: scale(.8); transform-origin: top center; margin-bottom: -18px; }
+.rw-card { background: #fff; border-radius: 22px; padding: 10px; display: flex; flex-direction: column; gap: 8px; max-width: 640px; margin: 4px auto; box-shadow: 0 3px 0 rgba(0,0,0,.08); }
+.rw-row { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 16px; opacity: .38; transition: opacity .25s, background .25s; }
+.rw-row.now { opacity: 1; background: #fff4d6; box-shadow: inset 0 0 0 3px #ffc94a; }
+.rw-row.done { opacity: .85; }
+.rw-row.done .rw-num { background: #2e9d4f; }
+.rw-num { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #46546b; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; }
+.rw-body { display: flex; flex-direction: column; gap: 2px; }
+.rw-label { font-size: .95rem; font-weight: 700; color: #5b6676; }
+.rw-hint { font-weight: 600; color: #8a93a3; }
+.rw-eq { font-size: 2rem; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.rw-sum { border-top: 2px dashed #e2e6ee; border-radius: 0 0 16px 16px; }
+/* Querformat: Ziffernblock rechts neben der Aufgabe, damit alles ohne Scrollen sichtbar ist */
+@media (orientation: landscape) and (min-width: 900px) {
+  .screen.task:has(.answers > .np) { display: grid; grid-template-columns: minmax(0, 1fr) 340px; column-gap: 28px; align-content: start; max-width: 1180px; }
+  .screen.task:has(.answers > .np) > * { grid-column: 1; }
+  .screen.task:has(.answers > .np) > .topbar { grid-column: 1 / -1; }
+  .screen.task:has(.answers > .np) > .answers { grid-column: 2; grid-row: 2 / span 4; align-self: center; display: block; }
+  .screen.task:has(.answers > .np) > .answers .np button { min-height: 72px; }
+}
+@media (orientation: landscape) and (min-width: 900px) { .screen.task:has(.answers > .np) > .newbadge { justify-self: center; } }

@@ -603,6 +603,7 @@ ${mouth}</svg>`;
     return warm.concat(rest).map((id) => ({ id, isNew: box(id) === 0, retry: false }));
   }
   function startSession(world, intro) {
+    if ((world === 'math' || world === 'mix') && !(state.demoSeen || {}).ze && !VIEWER) { showDemo('ze', () => startSession(world, intro)); return; }
     setTimeout(() => { try { flushReports(); } catch (e) { } }, 1500);
     const pools = world === 'mix' ? ['read', 'math', 'read', 'ru', 'read'] : [world];
     const N = state.settings.perSession;
@@ -1031,6 +1032,14 @@ ${mouth}</svg>`;
         h('div', { class: 'explain-btns' }, h('button', { class: 'tile', onclick: () => { SFX.tap(); say(); } }, '🔊 Nochmal hören'), h('button', { class: 'tile go', id: 'explain-ok', onclick: () => { SFX.tap(); close(); } }, then ? 'Verstanden, los! ✓' : 'Verstanden ✓'))));
     document.body.append(ov); setTimeout(say, 250);
   }
+  function wheelSvg(T, L, i, ans) {
+      const R1 = 118, R2 = 78, R0 = 42, cx = 130, cy = 130; const seg = (k, r1, r2) => { const a0 = (k / 8) * 2 * Math.PI - Math.PI / 2 - Math.PI / 8, a1 = a0 + Math.PI / 4; const p = (r, a) => `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`; return `M${p(r1, a0)} A${r1},${r1} 0 0 1 ${p(r1, a1)} L${p(r2, a1)} A${r2},${r2} 0 0 0 ${p(r2, a0)} Z`; };
+      const lab = (k, r) => { const a = (k / 8) * 2 * Math.PI - Math.PI / 2; return [(cx + r * Math.cos(a)).toFixed(1), (cy + r * Math.sin(a) + 7).toFixed(1)]; };
+          let svg = `<svg viewBox="0 0 260 260" class="zrad">`;
+      for (let k = 0; k < 8; k++) { const on = k === i; svg += `<path d="${seg(k, R1, R2)}" fill="${on ? '#fff3c4' : '#fff'}" stroke="#46546b" stroke-width="2"/><path d="${seg(k, R2, R0)}" fill="${on ? '#ffe0ec' : '#fff'}" stroke="#46546b" stroke-width="2"/>`; const [x, y] = lab(k, (R1 + R2) / 2); svg += `<text x="${x}" y="${y}" text-anchor="middle" font-size="20" font-weight="${on ? 800 : 500}" fill="${on ? '#1d2433' : '#9aa3b5'}">${L[k]}</text>`; if (on) { const [x2, y2] = lab(k, (R2 + R0) / 2); svg += `<text x="${x2}" y="${y2}" text-anchor="middle" font-size="20" font-weight="800" fill="#e8344e">${ans == null ? '?' : ans}</text>`; } }
+      svg += `<circle cx="${cx}" cy="${cy}" r="${R0}" fill="#fff" stroke="#46546b" stroke-width="2"/><text x="${cx}" y="${cy + 9}" text-anchor="middle" font-size="26" font-weight="800">${T}</text></svg>`;
+    return svg;
+  }
   // ---------- Vormachen: Max zeigt Schritt für Schritt, wie man rechnet (beim 1. Mal automatisch, sonst „🎬 Zeig mir wie“) ----------
   const strikeFrame = (n, gone) => h('div', { class: 'tf-wrap' }, [...Array(Math.max(1, Math.ceil(n / 10)))].map((_, f) => h('div', { class: 'tf' }, [...Array(10)].map((__, i) => { const k = f * 10 + i; return h('span', { class: 'tf-c' }, k < n ? h('span', { class: 'tf-d d1' + (k >= n - gone ? ' gone' : '') }) : null); }))));
   const strikeVal = (n, gone) => { const z = Math.floor(n / 10), e = n % 10; let g = gone; const ones = [...Array(e)].map((_, i) => h('span', { class: 'one-dot' + (i >= e - Math.min(g, e) ? ' gone' : '') })); g -= Math.min(g, e); return h('div', { class: 'tens' }, [...Array(z)].map((_, i) => h('span', { class: 'ten-bar' + (g > 0 && i === z - 1 ? ' part' : '') }, g > 0 && i === z - 1 ? [...Array(10)].map((__, j) => h('span', { class: 'seg' + (j >= 10 - g ? ' gone' : '') })) : null)), h('span', { class: 'ones' }, ones)); };
@@ -1041,6 +1050,8 @@ ${mouth}</svg>`;
     minus10: () => [[h('div', null, strikeFrame(13, 0), h('p', { class: 'eq-big' }, '13 − 5')), 'Wir rechnen 13 − 5. Erst gehen wir runter bis zur 10!'], [strikeFrame(13, 3), '13 − 3 = 10. Die 3 einzelnen Punkte sind weg.'], [h('p', { class: 'eq-big' }, '5 = 3 + 2'), 'Von den 5 haben wir 3 weggenommen. Es fehlen noch 2.'], [strikeFrame(13, 5), '10 − 2 = 8.'], [h('p', { class: 'eq-big' }, '13 − 5 = 8'), 'Also: 13 − 5 = 8. Erst runter bis zur 10, dann den Rest!']],
     minus100: () => [[h('div', null, placeVal(46), h('p', { class: 'eq-big' }, '46 − 9')), 'Wir rechnen 46 − 9. Erst runter bis zum Zehner!'], [strikeVal(46, 6), '46 − 6 = 40. Die 6 Einer sind weg.'], [h('p', { class: 'eq-big' }, '9 = 6 + 3'), 'Von der 9 haben wir 6 weggenommen. Es fehlen noch 3.'], [strikeVal(46, 9), '40 − 3 = 37. Von einem Zehner nehmen wir 3 weg.'], [h('p', { class: 'eq-big' }, '46 − 9 = 37'), 'Also: 46 − 9 = 37.']],
     ana: () => [[h('div', null, placeVal(28), h('p', { class: 'eq-big' }, '28 + 2')), 'Wir rechnen 28 + 2. Das sind 2 Zehner und 8 Einer.'], [placeVal(28, 0, 2), 'Die Zehner bleiben einfach liegen. Wir rechnen nur die Einer: 8 + 2 = 10.'], [placeVal(30), '10 Einer sind ein neuer Zehner! Jetzt sind es 3 Zehner.'], [h('p', { class: 'eq-big' }, '8 + 2 = 10  →  28 + 2 = 30'), 'Die kleine Aufgabe hilft dir bei der großen.']],
+    ze: () => [[placeVal(10), 'Große Zahlen sind aus Zehnern und Einern gebaut. Das hier ist ein Zehner: eine Stange mit 10 Punkten.'], [placeVal(1), 'Das ist ein Einer: ein einzelner Punkt.'], [h('div', null, placeVal(34), h('p', { class: 'eq-big' }, '34 = 3 Zehner + 4 Einer')), '34 sind 3 Zehner und 4 Einer. Die erste Ziffer sagt die Zehner, die zweite die Einer.'], [h('div', null, placeVal(34, 0, 2), h('p', { class: 'eq-big' }, '34 + 2 = 36')), 'Beim Rechnen bleiben die Zehner liegen. Wir rechnen nur mit den Einern: 4 + 2 = 6. Also 36.'], [h('div', null, placeVal(38, 2), h('p', { class: 'eq-big' }, '38 + 2 = 40')), 'Werden die Einer zusammen 10, gibt es einen neuen Zehner! 38 + 2 = 40.'], [h('div', null, placeVal(40, 0, 3), h('p', { class: 'eq-big' }, '38 + 5 = 38 + 2 + 3 = 43')), 'Das ist unser Trick: Erst bis zum Zehner, dann den Rest. Ab jetzt rechnen wir immer so!']],
+    zrad: () => [[svgEl(wheelSvg(30, ZRAD_SET[30], 0, null), 'zrad-wrap'), 'Das ist ein Zahlenrad. In der Mitte steht die Zielzahl, hier 30.'], [svgEl(wheelSvg(30, ZRAD_SET[30], 0, null), 'zrad-wrap'), 'Außen steht eine Zahl, hier 25. Innen fehlt etwas.'], [h('p', { class: 'eq-big' }, '25 + ? = 30'), 'Frag dich: Wie viel fehlt von 25 bis 30?'], [placeVal(25, 5), 'Schau auf die Einer: 5. Bis 10 fehlen 5. Das sind Zehnerfreunde!'], [svgEl(wheelSvg(30, ZRAD_SET[30], 0, 5), 'zrad-wrap'), '25 + 5 = 30. Also kommt die 5 in das innere Feld. So machst du es mit jedem Feld!']],
     erg: () => [[h('div', null, placeVal(25, 5), h('p', { class: 'eq-big' }, '25 + ? = 30')), 'Wie viel fehlt von 25 bis 30?'], [placeVal(25, 5), 'Schau auf die Einer: 5. Bis 10 fehlen 5. Das sind Zehnerfreunde!'], [h('p', { class: 'eq-big' }, '25 + 5 = 30'), 'Also fehlen 5.']]
   };
   function showDemo(key, then) {
@@ -2467,21 +2478,28 @@ ${mouth}</svg>`;
       ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${A} ${op} ${B} = ${res}`), h('p', { class: 'strat' }, `${A} ${op} ${toTen} = ${ten}, dann ${ten} ${op} ${rest} = ${res}.`)), voice: [] });
       ui.audio(() => null); return;
     }
-    const vis = picStage(ui, t.id, minus ? (A < 20 ? strikeFrame(A, 0) : placeVal(A)) : (A < 10 ? h('div', { class: 'tf-row' }, tenFrame(A, 0, B)) : placeVal(A, 0, B)));
+    // Bild, das sich mit jedem Schritt mitverändert
+    const picAt = (k) => minus ? (A < 20 ? strikeFrame(A, k === 0 ? 0 : k === 1 ? toTen : B) : (k === 0 ? placeVal(A) : strikeVal(A, k === 1 ? toTen : B)))
+      : (A < 10 ? h('div', { class: 'tf-row' }, k === 0 ? tenFrame(A, 0, B) : tenFrame(A, toTen, rest)) : (k === 0 ? placeVal(A, 0, B) : k === 1 ? placeVal(ten, 0, rest) : placeVal(res)));
+    const picBox = h('div', { class: 'rw-pic' }, picAt(0)); const vis = picStage(ui, t.id, picBox);
     if (b === 2) ui.noPic = 'zueSchritte';
-    const st2 = h('p', { class: 'zt-steps' }, `② ${ten} ${op} `, s2, ' = ?');
-    ui.stage.append(vis, h('p', { class: 'expr' }, `${A} ${op} ${B} = `, s3),
-      h('p', { class: 'zt-steps' }, `① ${A} ${op} `, s1, ` = ${ten}`, hint(minus ? `  (die ${e} Einer weg)` : `  (bis ${ten} fehlen ${toTen})`, 4)),
-      st2, hint(`${B} = ${toTen} + ${rest}`, 2) ? h('p', { class: 'zt-hint-line' }, `Tipp: ${B} = ${toTen} + ${rest}`) : null);
+    // Rechenweg als drei klare Zeilen: ① bis zum Zehner, ② der Rest, dann das Ergebnis
+    const row = (num, label, hintTxt, ...eq) => h('div', { class: 'rw-row' }, h('span', { class: 'rw-num' }, num), h('div', { class: 'rw-body' }, h('span', { class: 'rw-label' }, label, hintTxt ? h('span', { class: 'rw-hint' }, ' · ' + hintTxt) : null), h('span', { class: 'rw-eq' }, ...eq)));
+    const sRes = h('span', { class: 'slot' }, '?');
+    const r1 = row('1', minus ? 'Erst runter bis zum Zehner' : 'Erst bis zum Zehner', g < 4 ? (minus ? `die ${e} Einer weg` : `bis ${ten} fehlen ${toTen}`) : null, `${A} ${op} `, s1, ` = ${ten}`);
+    const r2 = row('2', 'Dann den Rest', g < 2 ? `${B} = ${toTen} + ${rest}` : null, `${ten} ${op} `, s2, ' = ', sRes);
+    const r3 = h('div', { class: 'rw-row rw-sum' }, h('span', { class: 'rw-num' }, '✓'), h('div', { class: 'rw-body' }, h('span', { class: 'rw-label' }, 'Also'), h('span', { class: 'rw-eq' }, `${A} ${op} ${B} = `, s3)));
+    const rows = [r1, r2, r3]; const setRow = (k) => rows.forEach((r, i) => { r.classList.toggle('now', i === k); r.classList.toggle('done', i < k); });
+    ui.stage.append(...[vis, h('div', { class: 'rw-card' }, r1, r2, r3)].filter(Boolean));
     demoHook(ui, minus ? (A < 20 ? 'minus10' : 'minus100') : (A < 10 ? 'plus10' : 'plus100'));
-    let allOk = true; const steps = [[s1, toTen], [s2, rest], [s3, res]]; let k = 0;
+    let allOk = true; const steps = [[s1, toTen, 0], [s2, rest, 1], [sRes, res, 1]]; let k = 0;
     const nextPad = () => {
-      const [sl, ans] = steps[k]; sl.classList.add('now');
+      const [sl, ans, ri] = steps[k]; sl.classList.add('now'); setRow(ri);
       ui.answers.replaceChildren(numpad((v) => {
         sl.classList.remove('now');
         if (v !== ans) { allOk = false; sl.textContent = String(ans); sl.classList.add('wrong'); SFX.oops(); } else { sl.classList.add('right'); SFX.ok(); }
-        k++; if (k === 2) st2.lastChild.textContent = ` = ${res}`;
-        if (k < steps.length) nextPad(); else { if (allOk) state.guide[gk] = g + 1; else state.guide[gk] = Math.max(0, g - 1); ui.done(allOk); }
+        k++; if (k === 1 || k === 3) picBox.replaceChildren(picAt(k === 1 ? 1 : 2));
+        if (k < steps.length) nextPad(); else { s3.textContent = String(res); s3.classList.add(allOk ? 'right' : 'wrong'); setRow(3); if (allOk) state.guide[gk] = g + 1; else state.guide[gk] = Math.max(0, g - 1); ui.done(allOk); }
       }, sl));
     };
     nextPad();
@@ -2632,15 +2650,11 @@ ${mouth}</svg>`;
     zahlenrad(t, ui) {
       const [, T, i] = t.id.split(':').map(Number); const L = ZRAD_SET[T]; const n = L[i];
       ui.prompt(`Zahlenrad: Was fehlt bis ${T}?`, null);
-      const R1 = 118, R2 = 78, R0 = 42, cx = 130, cy = 130; const seg = (k, r1, r2) => { const a0 = (k / 8) * 2 * Math.PI - Math.PI / 2 - Math.PI / 8, a1 = a0 + Math.PI / 4; const p = (r, a) => `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`; return `M${p(r1, a0)} A${r1},${r1} 0 0 1 ${p(r1, a1)} L${p(r2, a1)} A${r2},${r2} 0 0 0 ${p(r2, a0)} Z`; };
-      const lab = (k, r) => { const a = (k / 8) * 2 * Math.PI - Math.PI / 2; return [(cx + r * Math.cos(a)).toFixed(1), (cy + r * Math.sin(a) + 7).toFixed(1)]; };
-      let svg = `<svg viewBox="0 0 260 260" class="zrad">`;
-      for (let k = 0; k < 8; k++) { const on = k === i; svg += `<path d="${seg(k, R1, R2)}" fill="${on ? '#fff3c4' : '#fff'}" stroke="#46546b" stroke-width="2"/><path d="${seg(k, R2, R0)}" fill="${on ? '#ffe0ec' : '#fff'}" stroke="#46546b" stroke-width="2"/>`; const [x, y] = lab(k, (R1 + R2) / 2); svg += `<text x="${x}" y="${y}" text-anchor="middle" font-size="20" font-weight="${on ? 800 : 500}" fill="${on ? '#1d2433' : '#9aa3b5'}">${L[k]}</text>`; if (on) { const [x2, y2] = lab(k, (R2 + R0) / 2); svg += `<text x="${x2}" y="${y2}" text-anchor="middle" font-size="20" font-weight="800" fill="#e8344e">?</text>`; } }
-      svg += `<circle cx="${cx}" cy="${cy}" r="${R0}" fill="#fff" stroke="#46546b" stroke-width="2"/><text x="${cx}" y="${cy + 9}" text-anchor="middle" font-size="26" font-weight="800">${T}</text></svg>`;
+      const svg = wheelSvg(T, L, i, null);
       const slot = numTask(ui, T - n, `${n} + ${T - n} = ${T}`, null);
       ui.stage.append(svgEl(svg, 'zrad-wrap'), h('p', { class: 'expr small' }, `${n} + `, slot, ` = ${T}`));
       ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${n} + ${T - n} = ${T}`), h('p', { class: 'strat' }, T === 100 ? `Bis ${Math.ceil(n / 10) * 10} fehlen ${Math.ceil(n / 10) * 10 - n}, dann bis 100 noch ${100 - Math.ceil(n / 10) * 10}.` : `Schau auf die Einer: ${n % 10}. Bis 10 fehlen ${10 - (n % 10)}.`)), voice: [] });
-      demoHook(ui, 'erg'); ui.noPic = 'erg'; ui.audio(() => null);
+      demoHook(ui, 'zrad'); ui.noPic = 'erg'; ui.audio(() => null);
     },
     testweg(t, ui) {
       // Genau wie Aufgabe 2/5 im Test: alle Kästchen selbst ausfüllen
