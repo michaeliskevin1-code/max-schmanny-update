@@ -781,3 +781,21 @@ body.radio-on .studio-side { padding-bottom: 250px; }
 .zt-hint-line { text-align: center; color: #7a869a; font-weight: 600; margin: 2px 0; }
 .pic-hint { display: flex; justify-content: center; margin: 6px 0; }
 .flash-part { transition: opacity .6s; } .flash-part.flash-gone { opacity: 0; }
+/* Aufgaben im Testformat */
+.sheet-paper { background: #fff; border: 2px solid #d5dbe6; border-radius: 14px; padding: 14px 18px; margin: 6px auto; box-shadow: 0 2px 0 #e4e8f0; width: fit-content; max-width: 100%; }
+.tw-line { font-size: 1.9rem; font-weight: 700; margin: 8px 0; display: flex; align-items: center; gap: 8px; justify-content: flex-start; }
+.tw-line.big { border-bottom: 2px dashed #d5dbe6; padding-bottom: 10px; }
+.slot.box { display: inline-grid; place-items: center; min-width: 64px; height: 52px; border: 2.5px solid #46546b; border-radius: 8px; background: #fff; font-size: 1.7rem; font-weight: 800; }
+.slot.box.right { background: #e6f7ea; border-color: #2e9d4f; } .slot.box.wrong { background: #ffe9ec; border-color: #e8344e; color: #e8344e; }
+.calc-tab { border-collapse: collapse; font-size: 1.5rem; font-weight: 700; }
+.calc-tab th, .calc-tab td { border: 2px solid #46546b; width: 70px; height: 56px; text-align: center; }
+.calc-tab th { background: #f3f5f9; } .calc-tab th.op { background: #fff3c4; font-size: 1.8rem; }
+.calc-tab td.slot.box { border-radius: 0; display: table-cell; }
+.house { display: flex; flex-direction: column; align-items: center; margin: 8px auto; }
+.house-roof { width: 226px; height: 80px; background: #46546b; clip-path: polygon(50% 0, 100% 100%, 0 100%); display: grid; place-items: end center; }
+.house-roof > span { display: block; }
+.house-roof { color: #fff; font-size: 1.9rem; font-weight: 800; padding-bottom: 6px; box-sizing: border-box; }
+.house-floor { display: flex; border: 3px solid #46546b; border-top: none; }
+.house-cell { width: 110px; height: 70px; display: grid; place-items: center; font-size: 1.9rem; font-weight: 800; border-right: 3px solid #46546b; background: #fff; }
+.house-cell:last-child { border-right: none; }
+.zrad-wrap svg { width: min(260px, 70vw); height: auto; }
