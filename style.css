@@ -766,3 +766,16 @@ body.radio-on .studio-side { padding-bottom: 250px; }
 .zt-steps { font-size: 1.5rem; text-align: center; margin: 4px 0; font-weight: 700; }
 .slot.now { outline: 3px solid #ff3d8b; outline-offset: 2px; }
 .tf-row { display: flex; justify-content: center; }
+/* Vormachen */
+.demo .explain-card { max-width: 640px; }
+.demo-vis { min-height: 150px; display: grid; place-items: center; margin: 8px 0; }
+.demo-t { font-size: 1.35rem; line-height: 1.45; text-align: center; margin: 6px 0; font-weight: 600; }
+.demo-n { text-align: center; opacity: .55; margin: 0 0 6px; }
+.demo-btn { display: block; margin: 6px auto; font: inherit; font-weight: 700; padding: 8px 16px; border-radius: 999px; border: 2px solid #ff3d8b; background: #fff; color: #c2185b; cursor: pointer; }
+.tf-d.gone, .one-dot.gone { opacity: .25; position: relative; }
+.tf-d.gone::after, .one-dot.gone::after { content: '✕'; position: absolute; inset: 0; display: grid; place-items: center; color: #222; font-weight: 900; }
+.ten-bar.part { display: inline-flex; flex-direction: column; background: transparent; gap: 1px; }
+.ten-bar.part .seg { flex: 1; background: #e8344e; border-radius: 2px; }
+.ten-bar.part .seg.gone { background: #e8344e40; }
+.zt-hint { font-size: 1rem; font-weight: 600; color: #7a869a; }
+.zt-hint-line { text-align: center; color: #7a869a; font-weight: 600; margin: 2px 0; }
