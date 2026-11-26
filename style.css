@@ -779,3 +779,5 @@ body.radio-on .studio-side { padding-bottom: 250px; }
 .ten-bar.part .seg.gone { background: #e8344e40; }
 .zt-hint { font-size: 1rem; font-weight: 600; color: #7a869a; }
 .zt-hint-line { text-align: center; color: #7a869a; font-weight: 600; margin: 2px 0; }
+.pic-hint { display: flex; justify-content: center; margin: 6px 0; }
+.flash-part { transition: opacity .6s; } .flash-part.flash-gone { opacity: 0; }

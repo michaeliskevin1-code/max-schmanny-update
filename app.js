@@ -541,6 +541,7 @@ ${mouth}</svg>`;
       else { s.b = Math.min(6, s.b + 1); s.d = today + INTERVAL[s.b]; }
       // Selbst bewertet (vorlesen/sprechen): höchstens „geübt“ – „sicher“ nur über Aufgaben, die die App prüft
       if (info.self && s.b > 2) { s.b = 2; s.d = Math.min(s.d, today + 2); }
+      if (info.cap && s.b > info.cap) { s.b = info.cap; s.d = Math.min(s.d, today + 2); }
     } else {
       s.w++; s.b = 1; s.d = today; if (S) S.wrongSet.add(id);
     }
@@ -678,6 +679,7 @@ ${mouth}</svg>`;
     if (res.unlocks && res.unlocks.length) lines.push('Neu frei: ' + res.unlocks.map((u) => (typeof u === 'string' ? u : u.s)).join(', '));
     if (res.secured && res.secured.length) lines.push(`Neu sicher: ${res.secured.length} Aufgaben`);
     if (S.wrongSet && S.wrongSet.size) lines.push('Schwer heute: ' + [...S.wrongSet].slice(0, 5).map(itemLabel).join(' · '));
+    { const np = noPicText(); if (np) lines.push(np); }
     lines.push('', lernstandText());
     const title = `${state.name || 'Diana'} hat geübt ${pct >= 80 ? '⭐' : '✅'}`;
     sendReport(title, lines.join('\n'), 2);
@@ -691,6 +693,12 @@ ${mouth}</svg>`;
   // Wo ist sie gerade? (für Kevin)
   const WHERE = [['task ice', 'Eisbahn (Rechnen)'], ['task pool', 'Schwimmbad (Lesen)'], ['task ru', 'Russisch'], ['task', 'Aufgabe'], ['lese', 'Lese-Training'], ['album', 'Anziehen'], ['dance', 'Tanz-Pause'], ['home', 'Startseite'], ['story', 'Geschichte'], ['stories', 'Geschichte'], ['parents', 'Eltern-Bereich'], ['map', 'Tänze/Weg/Post/Trickbuch'], ['end', 'Runden-Ende'], ['splash', 'Startbild (Los-Knopf)'], ['setup', 'Einrichtung']];
   function whereLabel(cls) { const c = ' ' + cls + ' '; const f = WHERE.find(([k]) => k.split(' ').every((x) => c.includes(' ' + x + ' '))); return f ? f[1] : cls.replace('screen', '').trim() || '–'; }
+  // Wie gut klappt es OHNE Bild/Hilfe? (letzte 20 je Bereich) – das ist, was im Schultest zählt
+  function noPicText() {
+    const N = state.noPic || {}; const L = { zp: 'Zehnerfreunde', zue: 'Zehnerübergang ohne Schritte', zueSchritte: 'Zehnerübergang mit Schritten', ana: '28 + 2', erg: 'Ergänzen' };
+    const parts = Object.keys(L).filter((k) => (N[k] || []).length).map((k) => `${L[k]} ${N[k].reduce((a, b) => a + b, 0)}/${N[k].length}`);
+    return parts.length ? 'Ohne Bild (wie im Schultest): ' + parts.join(' · ') : '';
+  }
   function fullStatusText() {
     const L = state.lese || { log: [] }; const ll = L.log.filter((x) => x.teppich != null).slice(-3).reverse();
     const today = dayKey(dayNum()); const d = state.days[today];
@@ -699,7 +707,7 @@ ${mouth}</svg>`;
     return [
       `Gerade: ${document.hidden ? 'App im Hintergrund' : 'App offen'} · ${state.where || '–'} (${ago(state.whereAt)})`,
       `Heute: ${d ? `${d.s} Runden, ${d.t} Aufgaben, ${d.r} richtig` : 'noch nicht geübt'} · Lese-Training heute: ${leseToday() ? 'ja ✓' : 'nein'}`,
-      '', lernstandText(),
+      '', lernstandText(), noPicText() || 'Ohne Bild (wie im Schultest): noch keine Aufgaben',
       `Lesetext-Stufe: ${leseLvl()} von ${D.LSTUFEN.length}`,
       ll.length ? 'Letzte Lese-Trainings: ' + ll.map((x) => `${x.d.slice(8, 10)}.${x.d.slice(5, 7)}. St.${x.lvl || 1} ${x.teppich} Silben, ${x.wpm2 || x.wpm1 || '–'} W/min, Frage ${x.frage == null ? '–' : x.frage ? '✓' : '✗'}${x.partial ? ' (abgebr.)' : ''}`).join(' | ') : 'Noch kein Lese-Training',
       wob.length ? 'Wackelt: ' + wob.map((id) => `${itemLabel(id)} (${state.items[id].w}×)`).join(' · ') : 'Wackelt: nichts',
@@ -1150,6 +1158,7 @@ ${mouth}</svg>`;
         }, 350);
       },
       choices(opts, isRight, cls) {
+        ui.usedChoice = true;
         answers.className = 'answers ' + (cls || '');
         const btns = opts.map((o) => {
           const b = h('button', { class: 'tile ans', onclick: () => { if (S.locked) return; const ok = isRight(o.value); btns.forEach((x, i) => { x.disabled = true; if (isRight(opts[i].value)) x.classList.add('right'); }); if (!ok) b.classList.add('wrong'); ui.done(ok, o); } }, o.el || o.label);
@@ -1238,7 +1247,11 @@ ${mouth}</svg>`;
       const fb = (ui.feedback && ui.feedback(ok, o)) || {};
       if (poolOf(t.id) === 'ru') fb.ru = true;
       const dt = performance.now() - (t.t0 || performance.now());
-      grade(t.id, ok, { helped: ui.helps >= 2, fast: dt < (ui.fastMs || 7000), self: !!ui.self });
+      const isFast = dt < (ui.fastMs || 7000);
+      // Raten zählt nicht als „sicher“: Auswahl-Aufgaben in Mathe und zu langsame Tempo-Aufgaben höchstens Kasten 2
+      const cap = (ui.usedChoice && poolOf(t.id) === 'math') || (ui.needFast && !isFast) ? 2 : 0;
+      grade(t.id, ok, { helped: ui.helps >= 2, fast: isFast, self: !!ui.self, cap });
+      if (ui.noPic) notePic(ui.noPic, ok && ui.helps < 2);
       if (!t.retry) { S.done++; if (ok) S.right++; }
       if (t.isNew) S.newWrongStreak = ok ? 0 : S.newWrongStreak + 1;
       S.streak = ok ? (S.streak || 0) + 1 : 0;
@@ -1497,6 +1510,14 @@ ${mouth}</svg>`;
       const pab = svgEl(svgPablo(), 'pablo-big');
       ui.stage.append(h('div', { class: 'pablo-say' }, pab, h('div', { class: 'bubble' }, `${exprText(I)} = ${shown}`)));
       ui.choices([{ label: '👍 Stimmt', value: true }, { label: '🌶️ Geschummelt!', value: false }], (v) => v === honest, 'two');
+      // Erwischt? Dann muss sie die richtige Zahl selbst hinschreiben (erst das zählt)
+      const origDone = ui.done.bind(ui);
+      ui.done = (ok, o) => {
+        if (!(ok && !honest)) return origDone(ok, o);
+        const slot = h('span', { class: 'slot' }, '?');
+        ui.stage.append(h('p', { class: 'expr small' }, 'Wie viel ist es richtig? ', `${exprText(I)} = `, slot));
+        ui.answers.className = 'answers'; ui.answers.replaceChildren(numpad((v) => { slot.classList.add(v === I.c ? 'right' : 'wrong'); origDone(v === I.c, o); }, slot));
+      };
       ui.feedback = (ok) => {
         if (ok && !honest) { pab.innerHTML = svgPablo({ mood: 'caught' }); return { title: 'Erwischt! Pablo hat geschummelt, wie Kevin mit der Chili!', voice: [P('p:erwischt')] }; }
         if (ok) return { title: `Stimmt! ${exprText(I)} = ${I.c}. Diesmal war Pablo ehrlich.` };
@@ -2405,13 +2426,33 @@ ${mouth}</svg>`;
   }
   // Schritt für Schritt wie in der Schule. Plus: 48 + 6 → 48 + 2 = 50 → 50 + 4 = 54. Minus: 46 − 9 → 46 − 6 = 40 → 40 − 3 = 37.
   // Ausblenden der Hilfe (Fading): die ersten Male steht der Rechenweg grau als Tipp dabei.
+  // Konkretheit ausblenden: Kasten 0–1 mit Bild, Kasten 2 Bild nur über 💡 (zählt als Hilfe), ab Kasten 3 ohne Bild
+  function picStage(ui, id, el) {
+    const b = box(id); if (b <= 1) return el;
+    if (b >= 3) return null;
+    const holder = h('div', { class: 'pic-hint' }); const btn = h('button', { class: 'tip-btn', onclick: () => { if (S.locked) return; ui.helps += 2; holder.replaceChildren(el); } }, '💡 Bild zeigen');
+    holder.append(btn); return holder;
+  }
+  function notePic(cat, ok) { state.noPic = state.noPic || {}; const a = (state.noPic[cat] = state.noPic[cat] || []); a.push(ok ? 1 : 0); if (a.length > 20) a.shift(); }
   function stepTask(t, ui, A, B, minus) {
     const e = A % 10; const toTen = minus ? e : 10 - e; const ten = minus ? A - e : A + toTen; const rest = B - toTen; const res = minus ? A - B : A + B; const op = minus ? '−' : '+';
     const gk = (minus ? 'm' : 'p') + (A < 10 || (minus && A < 20) ? '10' : '100'); state.guide = state.guide || {}; const g = state.guide[gk] || 0;
     ui.prompt(minus ? 'Erst runter bis zum Zehner, dann den Rest!' : 'Erst bis zum Zehner, dann den Rest!', null);
     const s1 = h('span', { class: 'slot' }, '?'), s2 = h('span', { class: 'slot' }, '?'), s3 = h('span', { class: 'slot' }, '?');
     const hint = (txt, lvl) => (g < lvl ? h('span', { class: 'zt-hint' }, txt) : null);
-    const vis = minus ? (A < 20 ? strikeFrame(A, 0) : placeVal(A)) : (A < 10 ? h('div', { class: 'tf-row' }, tenFrame(A, 0, B)) : placeVal(A, 0, B));
+    const b = box(t.id);
+    if (b >= 3) {
+      // Wie im Schultest: nur die Aufgabe, keine Schritte, kein Bild
+      ui.prompt('Rechne aus!', 'p:tippen');
+      const slot = numTask(ui, res, `${A} ${op} ${B} = ${res}`, null);
+      ui.stage.append(h('p', { class: 'expr' }, `${A} ${op} ${B} = `, slot));
+      demoHook(ui, minus ? (A < 20 ? 'minus10' : 'minus100') : (A < 10 ? 'plus10' : 'plus100'));
+      ui.noPic = 'zue';
+      ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${A} ${op} ${B} = ${res}`), h('p', { class: 'strat' }, `${A} ${op} ${toTen} = ${ten}, dann ${ten} ${op} ${rest} = ${res}.`)), voice: [] });
+      ui.audio(() => null); return;
+    }
+    const vis = picStage(ui, t.id, minus ? (A < 20 ? strikeFrame(A, 0) : placeVal(A)) : (A < 10 ? h('div', { class: 'tf-row' }, tenFrame(A, 0, B)) : placeVal(A, 0, B)));
+    if (b === 2) ui.noPic = 'zueSchritte';
     const st2 = h('p', { class: 'zt-steps' }, `② ${ten} ${op} `, s2, ' = ?');
     ui.stage.append(vis, h('p', { class: 'expr' }, `${A} ${op} ${B} = `, s3),
       h('p', { class: 'zt-steps' }, `① ${A} ${op} `, s1, ` = ${ten}`, hint(minus ? `  (die ${e} Einer weg)` : `  (bis ${ten} fehlen ${toTen})`, 4)),
@@ -2535,9 +2576,16 @@ ${mouth}</svg>`;
     zehnerfreunde(t, ui) {
       const a = +t.id.split(':')[1];
       ui.prompt('Wie viele fehlen bis 10?', null);
-      ui.stage.append(tenFrame(a, 0), h('p', { class: 'expr small' }, `${a} + `, '§', ' = 10')); demoHook(ui, 'zp');
+      const bx = box(t.id); const pic = picStage(ui, t.id, tenFrame(a, 0));
+      ui.stage.append(...[pic, h('p', { class: 'expr' + (bx >= 3 ? '' : ' small') }, `${a} + `, '§', ' = 10')].filter(Boolean)); demoHook(ui, 'zp');
+      if (bx >= 2) ui.noPic = 'zp';
+      if (bx >= 3) {
+        // Blitz: Aufgabe nur kurz sichtbar, keine Uhr zu sehen; „sicher“ nur, wenn schnell (< 4 s)
+        ui.fastMs = 4000; ui.needFast = true;
+        setTimeout(() => { const f = ui.stage.querySelector('.flash-part'); if (f && f.isConnected && !S.locked) f.classList.add('flash-gone'); }, 2500);
+      }
       const slot = numTask(ui, 10 - a, `${a} + ${10 - a} = 10`, null);
-      const ex = ui.stage.querySelector('.expr.small'); ex.replaceChildren(`${a} + `, slot, ' = 10');
+      const ex = ui.stage.querySelector('.expr'); ex.replaceChildren(h('span', { class: 'flash-part' }, `${a} + `), slot, ' = 10');
       ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, tenFrame(a, 10 - a), h('p', { class: 'eq-big' }, `${a} + ${10 - a} = 10`), h('p', { class: 'strat' }, `${a} und ${10 - a} sind Zehnerfreunde.`)), voice: [] });
       ui.audio(() => null);
     },
@@ -2547,7 +2595,9 @@ ${mouth}</svg>`;
       const sm = `${uu} ${plus ? '+' : '−'} ${bb} = ${small}`;
       ui.prompt('Die kleine Aufgabe hilft dir!', null);
       const slot = numTask(ui, big, `${A} ${plus ? '+' : '−'} ${bb} = ${big}`, null);
-      ui.stage.append(h('p', { class: 'ana-small' }, 'Kleine Aufgabe: ', h('b', null, sm)), h('p', { class: 'expr' }, `${A} ${plus ? '+' : '−'} ${bb} = `, slot), placeVal(A)); demoHook(ui, 'ana');
+      const bx = box(t.id);
+      ui.stage.append(...[bx <= 2 ? h('p', { class: 'ana-small' }, 'Kleine Aufgabe: ', h('b', null, sm)) : null, h('p', { class: 'expr' }, `${A} ${plus ? '+' : '−'} ${bb} = `, slot), picStage(ui, t.id, placeVal(A))].filter(Boolean)); demoHook(ui, 'ana');
+      if (bx >= 3) ui.noPic = 'ana';
       ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${A} ${plus ? '+' : '−'} ${bb} = ${big}`), h('p', { class: 'strat' }, `Die Zehner bleiben, nur die Einer rechnen: ${sm}.`)), voice: [] });
       ui.audio(() => null);
     },
@@ -2555,7 +2605,8 @@ ${mouth}</svg>`;
       const [k, x] = t.id.split(':'); const n = +x; const goal = k === 'erh' ? 100 : Math.ceil(n / 10) * 10;
       ui.prompt(`Wie viel fehlt bis ${goal}?`, null);
       const slot = numTask(ui, goal - n, `${n} + ${goal - n} = ${goal}`, null);
-      ui.stage.append(placeVal(n, goal - n), h('p', { class: 'expr' }, `${n} + `, slot, ` = ${goal}`)); demoHook(ui, 'erg');
+      ui.stage.append(...[picStage(ui, t.id, placeVal(n, goal - n)), h('p', { class: 'expr' }, `${n} + `, slot, ` = ${goal}`)].filter(Boolean)); demoHook(ui, 'erg');
+      if (box(t.id) >= 2) ui.noPic = 'erg';
       ui.feedback = () => ({ detail: h('div', { class: 'fb-detail' }, h('p', { class: 'eq-big' }, `${n} + ${goal - n} = ${goal}`), h('p', { class: 'strat' }, k === 'erh' ? `${n / 10} Zehner + ${(goal - n) / 10} Zehner = 10 Zehner = 100` : `${n % 10} + ${goal - n} = 10, also ${n} + ${goal - n} = ${goal}`)), voice: [] });
       ui.audio(() => null);
     },
